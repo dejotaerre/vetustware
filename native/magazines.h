@@ -1,4 +1,5 @@
 #pragma once
+#include "i18n.h"
 #include <QJsonObject>
 #include <QVariantList>
 #include <QString>
@@ -11,7 +12,7 @@ public:
     QJsonObject entry(const QString &id) const;
     QString pdf(const QString &id) const;
     QString prepareDos(const QString &id,const QString &workingRoot) const;
-    QString error() const{return loadError;}
+    QString error() const{return loadError.isEmpty()?QString():uiText(loadError.toUtf8().constData());}
 private:
     QString base,loadError;
     QJsonObject catalog;

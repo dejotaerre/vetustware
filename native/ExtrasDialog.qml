@@ -10,8 +10,8 @@ Dialog {
     height: Math.min(640, parent.height - 80)
     modal: true
     focus: true
-    title: "Extras · " + (vetust.selected.title || "")
-    footer: Item { height: 56; Button { text: "Cerrar"; width: 100; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 12; onClicked: dialog.close() } }
+    title: qsTranslate("Vetust", "Extras · ") + (vetust.selected.title || "")
+    footer: Item { height: 56; Button { text: qsTranslate("Vetust", "Close"); width: 100; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 12; onClicked: dialog.close() } }
     palette.window: "#111e29"; palette.windowText: "#e7edf1"
     palette.text: "#e7edf1"; palette.base: "#0b151f"
     palette.button: "#233443"; palette.buttonText: "#e7edf1"
@@ -20,13 +20,13 @@ Dialog {
         spacing: 14
         Label {
             Layout.fillWidth: true
-            text: "Mapas, guías y material de la colección original. Pueden corresponder a otra edición o idioma."
+            text: qsTranslate("Vetust", "Maps, guides and material from the original collection. They may belong to a different edition or language.")
             color: "#a8b6c2"; wrapMode: Text.WordWrap
         }
         TextField {
             id: search; objectName: "extrasSearch"
             Layout.fillWidth: true
-            placeholderText: "Buscar en los extras…"
+            placeholderText: qsTranslate("Vetust", "Search extras…")
             color: "#e7edf1"; placeholderTextColor: "#91a3b3"
         }
         ListView {
@@ -46,11 +46,11 @@ Dialog {
                         Label { Layout.fillWidth: true; text: modelData.name; wrapMode: Text.WrapAnywhere; color: "#e7edf1" }
                         Label { text: modelData.kind + " · " + (modelData.bytes / 1048576).toFixed(1) + " MiB"; color: "#91a3b3"; font.pixelSize: 11 }
                     }
-                    Button { objectName: "openExtra" + modelData.index; text: "Abrir"; enabled: !vetust.busy; onClicked: vetust.openExtra(modelData.index) }
+                    Button { objectName: "openExtra" + modelData.index; text: qsTranslate("Vetust", "Open"); enabled: !vetust.busy; onClicked: vetust.openExtra(modelData.index) }
                 }
             }
-            Label { anchors.centerIn: parent; visible: files.count === 0; text: "No hay extras con ese nombre."; color: "#91a3b3" }
+            Label { anchors.centerIn: parent; visible: files.count === 0; text: qsTranslate("Vetust", "No extras match that name."); color: "#91a3b3" }
         }
-        Label { Layout.fillWidth: true; text: vetust.busy ? "Abriendo el archivo…" : "Los PDF se abren aquí. Los demás formatos utilizan el visor del sistema."; color: "#91a3b3"; wrapMode: Text.WordWrap; font.pixelSize: 12 }
+        Label { Layout.fillWidth: true; text: vetust.busy ? qsTranslate("Vetust", "Opening the file…") : qsTranslate("Vetust", "PDFs open here. Other formats use your system's viewer."); color: "#91a3b3"; wrapMode: Text.WordWrap; font.pixelSize: 12 }
     }
 }

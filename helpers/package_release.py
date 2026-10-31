@@ -17,9 +17,9 @@ NATIVE = '''CMakeLists.txt Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasD
 archive.cpp archive.h archive_tests.cpp backend.cpp backend.h backend_magazines.cpp
 magazines.cpp magazines.h magazines_tests.cpp displays.cpp displays.h
 emulation.cpp emulation.h emulation_tests.cpp home.cpp home_tests.cpp main.cpp
-storage.cpp storage.h extras.cpp extras.h extras_tests.cpp icon.svg'''.split()
-HELPERS = ['install.py', 'catalog_index.py', 'import_library.py', 'package_release.py']
-DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'CHANGELOG.md', 'docs/BIBLIOTECAS.md']
+storage.cpp storage.h extras.cpp extras.h extras_tests.cpp icon.svg i18n.cpp i18n.h i18n_tests.cpp'''.split()
+HELPERS = ['install.py', 'catalog_index.py', 'import_library.py', 'package_release.py', 'check_translations.py']
+DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'CHANGELOG.md', 'docs/BIBLIOTECAS.md', 'docs/TRANSLATING.md']
 
 
 def sha(path):
@@ -75,7 +75,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='vetustware-release-') as temporary:
         stage = Path(temporary) / label
         stage.mkdir()
-        names = [f'native/{name}' for name in NATIVE] + [f'helpers/{name}' for name in HELPERS] + DOCS
+        names = [f'native/{name}' for name in NATIVE] + [f'helpers/{name}' for name in HELPERS] + DOCS + ['translations/' + path.name for path in sorted((source / 'translations').glob('*.json'))]
         for name in names:
             dst = stage / name
             dst.parent.mkdir(parents=True, exist_ok=True)

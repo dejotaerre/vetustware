@@ -37,6 +37,8 @@ def copy_program(source, stage, personal):
     icon = source / 'native/icon.svg'
     shutil.copy2(icon if icon.exists() else source / 'icon.svg', stage / 'icon.svg')
     shutil.copytree(source / 'helpers', stage / 'helpers', ignore=shutil.ignore_patterns('__pycache__'))
+    shutil.copytree(source / 'translations', stage / 'translations')
+    shutil.copy2(source / 'docs/TRANSLATING.md', stage / 'TRANSLATING.md')
     runtime = source / 'runtime'
     if runtime.exists():
         shutil.copytree(runtime, stage / 'runtime', symlinks=True,
@@ -137,11 +139,15 @@ def main():
             backup = destination / 'backups' / (datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '-update')
             backup.mkdir(parents=True)
             # Actualizar solo programa y helpers. Configuración, partidas y herramientas propias se conservan.
-            for name in ('vetustware', 'icon.svg', 'helpers', 'INSTALACION.md', 'LICENSE', 'THIRD_PARTY.md', 'BUILD_INFO.json'):
+            for name in ('vetustware', 'icon.svg', 'helpers', 'translations', 'TRANSLATING.md', 'INSTALACION.md', 'LICENSE', 'THIRD_PARTY.md', 'BUILD_INFO.json'):
                 new = stage / name
                 if not new.exists():
                     continue
                 old = destination / name
+                if name == 'translations' and old.is_dir():
+                    for translation in old.glob('*.json'):
+                        if not (new / translation.name).exists():
+                            shutil.copy2(translation, new / translation.name)
                 if old.exists():
                     shutil.move(old, backup / name)
                 shutil.move(new, old)

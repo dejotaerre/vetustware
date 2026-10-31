@@ -25,7 +25,7 @@ private:
 };
 class Backend : public QObject {
     Q_OBJECT
-    Q_PROPERTY(QVariantMap storageSettings READ storageSettings NOTIFY storageChanged)
+    Q_PROPERTY(QVariantMap storageSettings READ storageSettings NOTIFY settingsChanged)
     Q_PROPERTY(QVariantList monitors READ monitors NOTIFY monitorsChanged)
     Q_PROPERTY(QVariantList pageGames READ pageGames NOTIFY changed)
     Q_PROPERTY(QVariantList homeRows READ homeRows NOTIFY homeChanged)
@@ -33,7 +33,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantMap selected READ selected NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList gameExtras READ gameExtras NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList magazineSeries READ magazineSeries NOTIFY storageChanged)
-    Q_PROPERTY(QString magazineError READ magazineError NOTIFY storageChanged)
+    Q_PROPERTY(QString magazineError READ magazineError NOTIFY settingsChanged)
     Q_PROPERTY(int count READ count NOTIFY changed)
     Q_PROPERTY(int page READ page NOTIFY changed)
     Q_PROPERTY(int pages READ pages NOTIFY changed)
@@ -54,6 +54,7 @@ public:
     QVariantList homeRows() const{return homeRowData;}
     QVariantMap homeSpotlight() const{return spotlightData;}
     Q_INVOKABLE void refreshHome();
+    void retranslate();
     static constexpr int PageSize=28;
     QVariantMap selected() const;
     int count() const{return filtered.size();}
@@ -90,6 +91,7 @@ public:
     Q_INVOKABLE QString diagnostics() const;
 signals:
     void storageChanged();
+    void settingsChanged();
     void monitorsChanged();
     void changed();void homeChanged();void selectionChanged();void statusChanged();void manualReady(QUrl url);
     void extraReady(QUrl url,QString name,bool pdf);

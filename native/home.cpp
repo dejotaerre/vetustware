@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "backend.h"
 #include <QDate>
 #include <QJsonArray>
@@ -36,7 +37,7 @@ void Backend::rebuildHome(){
     std::sort(recentIds.begin(),recentIds.end(),[&](int a,int b){
         return recent.value(games[a]["id"].toString())>recent.value(games[b]["id"].toString());
     });
-    add("recent","Jugados recientemente","Vuelve a los juegos que ya abriste",recentIds);
+    add("recent",uiText("Recently played"),uiText("Return to games you have already opened"),recentIds);
 
     int seed=-1;
     if(!favoriteIds.isEmpty()){
@@ -64,23 +65,23 @@ void Backend::rebuildHome(){
         }
         std::stable_sort(recommended.begin(),recommended.end(),[&](int a,int b){return scores[a]>scores[b];});
         recommended=recommended.mid(0,60);
-        reason=(favorites.value(reference["id"].toString())?"Porque te gusta ":"Más como ")+reference["title"].toString();
-        add("recommendations",reason,"Afinidad por géneros y estudio · A partir de tu actividad local",recommended);
+        reason=(favorites.value(reference["id"].toString())?uiText("Because you like "):uiText("More like "))+reference["title"].toString();
+        add("recommendations",reason,uiText("Related genres and studios · Based on your local activity"),recommended);
     }else{
-        recommended=daily.mid(0,36);reason="Para empezar a explorar";
-        add("recommendations",reason,"Selección diaria · Marca favoritos para recibir sugerencias afines",recommended);
+        recommended=daily.mid(0,36);reason=uiText("Start exploring");
+        add("recommendations",reason,uiText("Daily selection · Mark favorites for more relevant suggestions"),recommended);
     }
     if(!recommended.isEmpty()){
         spotlightData=publicGame(games[recommended.first()]);spotlightData["reason"]=reason;
     }else if(!daily.isEmpty()){
-        spotlightData=publicGame(games[daily.first()]);spotlightData["reason"]="Una nueva mirada a tu colección";
+        spotlightData=publicGame(games[daily.first()]);spotlightData["reason"]=uiText("A fresh look at your collection");
     }
-    add("spanish","En español","Ediciones y subtítulos disponibles en tu colección",pick([&](const QJsonObject &g){
+    add("spanish",uiText("In Spanish"),uiText("Editions and subtitles available in your collection"),pick([&](const QJsonObject &g){
         const QString id=g["id"].toString();
         const auto profile=spanishProfiles.contains(id)?spanishProfiles[id].toObject():profiles[id].toObject();
         return (spanishProfiles.contains(id)||profile["language"].toString()=="es")&&QFileInfo::exists(storage.expand(profile["editionDirectory"].toString())+"/.ready");
     }));
-    add("favorites","Tus favoritos","Tu selección personal",favoriteIds);
+    add("favorites",uiText("Your favorites"),uiText("Your personal selection"),favoriteIds);
     auto genreRow=[&](const QString &key,const QString &title,const QString &subtitle,const QStringList &genres,bool graphical=false){
         add(key,title,subtitle,pick([&](const QJsonObject &g){
             const auto tags=g["genre"].toString().split(';');
@@ -89,25 +90,25 @@ void Backend::rebuildHome(){
             return false;
         }));
     };
-    genreRow("adventure","Aventuras gráficas","Historias, exploración y enigmas",{"Adventure"},true);
-    genreRow("strategy","Estrategia y construcción","Ciudades, imperios y decisiones",{"Strategy","Construction and Management Simulation"});
-    genreRow("action","Acción y disparos","Reflejos, desafíos y mundos por recorrer",{"Action","Shooter","First Person Shooter"});
-    genreRow("racing","Carreras","Velocidad en todas sus formas",{"Racing / Driving"});
-    genreRow("rpg","Rol","Personajes, mazmorras y grandes aventuras",{"Role-Playing"});
-    genreRow("puzzle","Puzles","Una buena idea vale más que mil reflejos",{"Puzzle"});
-    genreRow("platform","Plataformas","Saltos que siguen en la memoria",{"Platform"});
-    genreRow("sports","Deportes","Del estadio a tu teclado",{"Sports"});
+    genreRow("adventure",uiText("Graphic adventures"),uiText("Stories, exploration and puzzles"),{"Adventure"},true);
+    genreRow("strategy",uiText("Strategy and building"),uiText("Cities, empires and decisions"),{"Strategy","Construction and Management Simulation"});
+    genreRow("action",uiText("Action and shooters"),uiText("Reflexes, challenges and worlds to explore"),{"Action","Shooter","First Person Shooter"});
+    genreRow("racing",uiText("Racing"),uiText("Speed in all its forms"),{"Racing / Driving"});
+    genreRow("rpg",uiText("Role-playing"),uiText("Characters, dungeons and great adventures"),{"Role-Playing"});
+    genreRow("puzzle",uiText("Puzzles"),uiText("A good idea beats quick reflexes"),{"Puzzle"});
+    genreRow("platform",uiText("Platformers"),uiText("Jumps you still remember"),{"Platform"});
+    genreRow("sports",uiText("Sports"),uiText("From the stadium to your keyboard"),{"Sports"});
     auto studioRow=[&](const QString &key,const QString &title,const QStringList &names){
-        add(key,title,"Explora por estudio",pick([&](const QJsonObject &g){
+        add(key,title,uiText("Explore by studio"),pick([&](const QJsonObject &g){
             for(const auto &name:names)if(g["developer"].toString().contains(name,Qt::CaseInsensitive))return true;
             return false;
         }));
     };
-    studioRow("lucasarts","El universo de LucasArts",{"LucasArts","Lucasfilm"});
-    studioRow("sierra","Historias de Sierra",{"Sierra"});
+    studioRow("lucasarts",uiText("The LucasArts universe"),{"LucasArts","Lucasfilm"});
+    studioRow("sierra",uiText("Sierra stories"),{"Sierra"});
     studioRow("idsoftware","id Software",{"id Software"});
     auto discovery=pick([&](const QJsonObject &g){const auto id=g["id"].toString();return !favorites.value(id)&&recent.value(id)<=0;});
     for(int i:recommended)discovery.removeAll(i);
-    add("discover","Descubre algo distinto","Otra selección cada día · Más allá de los títulos habituales",discovery.mid(0,36));
+    add("discover",uiText("Discover something different"),uiText("A different selection every day · Beyond the familiar titles"),discovery.mid(0,36));
     emit homeChanged();
 }

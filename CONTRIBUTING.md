@@ -26,3 +26,12 @@ datos personales. No adjuntes partidas privadas, juegos, ISOs, ROMs ni claves.
 Antes de enviar cambios, comprueba que no se hayan incluido data/, config/,
 runtime/, bibliotecas, registros ni rutas personales. Las contribuciones al
 código propio se publican bajo la licencia MIT del proyecto.
+
+## Interface translations / Traducciones
+
+You can contribute a language without changing C++ or rebuilding the app.
+See [Translating VETUSTware](docs/TRANSLATING.md) for the JSON format, validation,
+and preview instructions. English and Spanish are included.
+
+Para añadir o corregir un idioma, edita los archivos de `translations/`.
+La [guía de traducción](docs/TRANSLATING.md) explica cómo probarlos y enviarlos.

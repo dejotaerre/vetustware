@@ -1,121 +1,141 @@
 # VETUSTware
 
-**Tu colección DOS, lista para explorar y jugar.**
+**English** · [Español](README.es.md)
 
-VETUSTware es una aplicación nativa para Linux, escrita en C++20 y Qt Quick,
-que organiza una biblioteca local de juegos MS-DOS y los abre con DOSBox.
-Carátulas, fichas, manuales y configuraciones individuales en una interfaz
-pensada para disfrutar de la colección. No necesita un navegador ni una cuenta.
+**Your DOS collection, ready to explore and play.**
 
-*Native Linux frontend for local DOS game collections, with DOSBox profiles,
-artwork, manuals and portable libraries. The current interface is in Spanish.*
+VETUSTware is a native Linux application built with C++20 and Qt Quick. It
+organizes a local MS-DOS game library and launches games through DOSBox.
+Browse covers, game details, manuals and individual emulation settings in an
+interface designed for exploring your collection. No browser or account needed.
 
-![Inicio de VETUSTware 0.3.2 con selecciones y categorías](docs/images/inicio.png)
+![VETUSTware home screen in English, with recommendations and favorites](docs/images/en/home.png)
 
-[Descargar 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
-· [Instalación](INSTALACION.md)
-· [Bibliotecas](docs/BIBLIOTECAS.md)
-· [Reportar un problema](https://github.com/dejotaerre/vetustware/issues)
+[Download 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
+· [Installation guide (Spanish)](INSTALACION.md)
+· [Library format (Spanish)](docs/BIBLIOTECAS.md)
+· [Report an issue](https://github.com/dejotaerre/vetustware/issues)
 
-## Qué puedes hacer
+**Development preview:** the screenshots below show the current English
+interface. The published **0.3.2** package still has the Spanish interface.
+To use the new language selector before the next release, [build the current
+source](#build-and-test).
 
-- Explorar categorías y selecciones, buscar juegos, guardar favoritos y volver a los recientes.
-- Consultar carátulas, capturas y manuales desde la ficha de cada juego.
-- Elegir DOSBox Staging, DOSBox clásico o DOSBox-X, con ajustes globales y por juego.
-- Cambiar pantalla completa y elegir monitor cuando hay más de uno disponible.
-- Elegir imagen Nítida (predeterminada) o Monitor clásico (CRT) en DOSBox Staging,
-  globalmente o por juego, conservando las proporciones.
-- Acceder a opciones avanzadas de CPU, memoria, vídeo, sonido y ejecutable del emulador.
-- Abrir una consola DOS con las unidades y las imágenes del juego montadas.
-- Usar XTree Gold o Norton Commander cuando la biblioteca aporte esas herramientas.
-- Reconocer ediciones y perfiles personalizados de una biblioteca VETUSTware.
+## What you can do
 
-Desde 0.3.1, el botón **Extras** permite consultar los documentos y medios
-complementarios que aporte la biblioteca. Los PDF se muestran dentro de la
-aplicación; otros formatos usan el visor del sistema. Consulta
-[el formato de complementos](docs/BIBLIOTECAS.md#complementos-opcionales-desde-031).
+- Browse categories and selections, search for games, save favorites and return to recently played titles.
+- View covers, screenshots and manuals from each game's details page.
+- Choose DOSBox Staging, classic DOSBox or DOSBox-X, with global and per-game settings.
+- Toggle fullscreen and select a monitor when more than one is available.
+- Choose Sharp (the default) or Classic monitor (CRT) rendering in DOSBox Staging,
+  globally or per game, while preserving the aspect ratio.
+- Access advanced CPU, memory, video, sound and emulator executable options.
+- Open a DOS console with the game's drives and disk images already mounted.
+- Use XTree Gold or Norton Commander when those tools are supplied by the library.
+- Recognize custom editions and profiles supplied by a VETUSTware library.
+- Switch between English and Spanish without changing the language of your games.
 
-Desde 0.3.2, **Revistas** permite explorar colecciones con portadas, lectura
-PDF integrada y revistas electrónicas mediante DOSBox. El material se aporta
-en `Revistas/` dentro de la biblioteca; no se incluye en el motor. Consulta [su formato](docs/BIBLIOTECAS.md#revistas-opcionales).
+Since 0.3.1, the **Extras** button opens supplementary documents and media
+provided by the library. PDFs open inside the application; other formats use
+your system's viewer. See the [extras format (Spanish)](docs/BIBLIOTECAS.md#complementos-opcionales-desde-031).
 
-Capturas de la interfaz de **VETUSTware 0.3.2**.
+Since 0.3.2, **Magazines** offers collections with cover art, integrated PDF
+reading and DOS disk magazines. This material is supplied in the library's
+`Revistas/` folder; it is not included with the application. See the
+[magazine format (Spanish)](docs/BIBLIOTECAS.md#revistas-opcionales).
 
-**Ficha del juego:** selección de edición, manual, extras y configuración individual.
+**Game details:** edition selection, manuals, extras and individual settings.
+The example shows a Spanish game edition selected within the English interface.
 
-![Ficha de Larry 7 con la edición en español seleccionada](docs/images/ficha.png)
+![Larry 7 details in the English interface, with its Spanish edition selected](docs/images/en/game-details.png)
 
-**Revistas:** colecciones de publicaciones en PDF y revistas electrónicas para DOS.
+**Magazines:** collections of PDF publications and DOS disk magazines.
 
-![Colecciones de la sección Revistas](docs/images/revistas.png)
+![Magazine collections in the English interface](docs/images/en/magazines.png)
 
 <details>
-<summary>Ver los ajustes y el visor PDF</summary>
+<summary>View settings and the PDF reader</summary>
 
-**Ajustes:** pantalla completa con un interruptor, imagen Nítida por defecto y
-opciones avanzadas plegadas. El selector de monitor aparece cuando se detecta
-más de uno; esta captura corresponde a una sola pantalla.
+**Settings:** an interface language selector, a fullscreen switch, Sharp
+rendering by default and collapsible advanced options. The monitor selector
+appears only when more than one display is detected; none is shown in this capture.
 
-![Ajustes globales de emulación](docs/images/ajustes.png)
+![Global settings with English selected as the interface language](docs/images/en/settings.png)
 
-**Lectura integrada:** navegación por páginas, ajuste al ancho y cierre con la X.
+**Integrated reading:** page navigation, fit-to-width and an X to close the viewer.
+This example opens Larry 7's English game design document from Extras.
 
-![Manual en español de Larry 7 en el visor PDF](docs/images/visor-pdf.png)
+![An English Larry 7 design document in the integrated PDF viewer](docs/images/en/pdf-viewer.png)
 
 </details>
 
-Las capturas ilustran una biblioteca aportada localmente. Los juegos, imágenes,
-manuales y revistas que aparecen no se incluyen en el programa ni en sus descargas.
+These screenshots show a locally supplied library. The games, artwork, manuals
+and magazines shown are not included with the application or its downloads.
 
-## Empezar
+## Get started
 
-La versión **0.3.2 es una versión de prueba para Linux x86_64**.
-El ejecutable publicado se compiló y probó en **CachyOS con Qt 6.12**. No es un
-paquete universal: necesita bibliotecas compatibles del sistema. El código
-fuente permite compilar en otras distribuciones; su compatibilidad todavía
-requiere pruebas.
+Version **0.3.2 is a preview release for Linux x86_64**. The published executable
+was built and tested on **CachyOS with Qt 6.12**. It is not a universal package:
+you need compatible system libraries. Source builds are available for other
+distributions, but compatibility still needs testing.
 
-1. Instala las dependencias indicadas en [INSTALACION.md](INSTALACION.md) y un
-   emulador DOSBox. Los perfiles se han trabajado principalmente con DOSBox Staging.
-2. Descarga y extrae `vetustware-0.3.2-linux-x86_64.tar.gz` desde
+1. Install the dependencies listed in [INSTALACION.md (Spanish)](INSTALACION.md)
+   and a DOSBox emulator. Most profile work has used DOSBox Staging.
+2. Download and extract `vetustware-0.3.2-linux-x86_64.tar.gz` from
    [Releases](https://github.com/dejotaerre/vetustware/releases).
-3. Dentro de la carpeta extraída, ejecuta:
+3. Inside the extracted folder, run:
 
    ```sh
    python3 helpers/install.py --desktop
    ```
 
-4. Abre VETUSTware y elige tu biblioteca local compatible.
+4. Open VETUSTware and select your compatible local library.
 
-El destino predeterminado es `~/vetustware`. La biblioteca puede estar en otro
-disco. Las copias jugables se crean al necesitarlas en `data/games` dentro de
-la instalación, o en la carpeta alternativa elegida por el usuario.
+The default installation directory is `~/vetustware`. The library can live on
+another drive. Playable copies are created as needed in the installation's
+`data/games` folder, or in another folder chosen by the user.
 
-El motor **no incluye ni descarga juegos, ISOs, ROMs, carátulas, manuales,
-emuladores ni herramientas DOS de terceros**. También funciona con una
-biblioteca personalizada ya preparada, siempre que se aporte por separado.
+The application **does not include or download games, ISOs, ROMs, cover art,
+manuals, emulators or third-party DOS tools**. It can use a prepared custom
+library, supplied separately.
 
-## Motor, biblioteca y partidas
+## Application, library and saves
 
-| Parte | Contenido | Ubicación |
+| Part | Contents | Location |
 |---|---|---|
-| Motor | Aplicación, helpers, ajustes y datos locales | `~/vetustware` por defecto |
-| Biblioteca | Archivos originales, metadatos y personalizaciones opcionales | Cualquier carpeta o disco disponible |
-| Copias jugables | Archivos extraídos y partidas de cada usuario | `data/games` o destino personalizado |
+| Application | Executable, helpers, settings and local data | `~/vetustware` by default |
+| Library | Original archives, metadata and optional custom editions | Any available folder or drive |
+| Playable copies | Extracted game files and each user's saves | `data/games` or a custom location |
 
-La biblioteca se consulta en lectura. Las partidas y cambios de cada jugador
-se guardan en sus copias jugables. Recuperar una copia desde la biblioteca no
-recupera partidas posteriores que se hayan borrado.
+The library is read-only during use. Saves and player changes are stored in
+playable copies. Restoring a copy from the library does not recover newer saves
+that have been deleted.
 
-La versión actual admite la estructura eXoDOS descrita en la guía y las
-bibliotecas personalizadas VETUSTware. No es un importador general de carpetas
-arbitrarias de juegos o ISOs. Consulta [el formato de biblioteca](docs/BIBLIOTECAS.md).
+VETUSTware supports the eXoDOS structure described in the documentation and
+custom VETUSTware libraries. It is not a general-purpose importer for arbitrary
+game folders or ISOs. See the [library format (Spanish)](docs/BIBLIOTECAS.md).
 
-## Compilar y probar
+## Interface languages
 
-Se necesitan C++20, CMake 3.21 o posterior, pkg-config, Qt 6.5 o posterior
-(Quick, QuickControls2, Sql/SQLite, Concurrent, PdfQuick y Test), libzip y SDL2.
-Python 3 se utiliza para instalar e importar metadatos.
+The current source defaults to **English**. Select **Settings → Interface
+language → Español** to switch to Spanish. Changes apply immediately and are
+saved for future sessions. Game editions, emulation settings and saves are
+independent of the interface language.
+
+Anyone can contribute another language through a JSON file, without changing
+C++ or recompiling the application. See [Translating VETUSTware](docs/TRANSLATING.md)
+for the format, validation and preview instructions. Missing translations fall
+back to English.
+
+Game descriptions, manuals, magazine content and other imported material retain
+their original languages. The language selector is a development feature and
+is not included in the published 0.3.2 package.
+
+## Build and test
+
+Requirements: C++20, CMake 3.21 or newer, pkg-config, Qt 6.5 or newer
+(Quick, QuickControls2, Sql/SQLite, Concurrent, PdfQuick and Test), libzip and SDL2.
+Python 3 is used for installation, metadata import and translation validation.
 
 ```sh
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
@@ -124,22 +144,29 @@ ctest --test-dir native/build --output-on-failure
 python3 helpers/install.py --desktop
 ```
 
-Las pruebas utilizan datos sintéticos y no necesitan una colección de juegos.
-Incluyen extracción ZIP, catálogo, emulación y navegación de la interfaz.
+Tests use synthetic data and do not require a game collection. They cover ZIP
+extraction, the catalog, emulation settings, extras, magazines, interface
+navigation, translations and language persistence.
 
-## Estado y límites
+## Status and limitations
 
-- Interfaz en español; los nombres y descripciones importados dependen de la biblioteca.
-- Cada juego puede requerir un motor DOSBox o ajustes específicos. Importar un perfil no verifica su compatibilidad.
-- Escritorio Linux con X11 o XWayland; otras plataformas y Wayland nativo no están validados en esta versión.
-- El selector de monitor depende de las capacidades del emulador y del entorno gráfico.
-- No hay descargas automáticas de bibliotecas, traducciones ni imágenes.
+- The current source includes English and Spanish interfaces; imported names and descriptions depend on the library.
+- Each game may require a particular DOSBox engine or specific settings. Importing a profile does not verify its compatibility.
+- Linux desktops with X11 or XWayland are supported; other platforms and native Wayland have not been validated for this version.
+- Monitor selection depends on the emulator and the desktop environment.
+- Libraries, translations and images are not downloaded automatically.
 
-Para colaborar o informar de errores, consulta [CONTRIBUTING.md](CONTRIBUTING.md).
+For contributions and bug reports, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For interface translations, start with the [English translation guide](docs/TRANSLATING.md).
 
-## Licencia
+## License
 
-El código propio de VETUSTware se publica con licencia [MIT](LICENSE).
-Las dependencias y los contenidos de terceros conservan sus propias licencias.
-Las imágenes de juegos visibles en las capturas no están cubiertas por la
-licencia MIT del código. Más información en [THIRD_PARTY.md](THIRD_PARTY.md).
+VETUSTware's own code is released under the [MIT license](LICENSE).
+Dependencies and third-party content retain their own licenses. Game imagery
+visible in the screenshots is not covered by the code's MIT license.
+See [THIRD_PARTY.md](THIRD_PARTY.md) for details.
+
+## Contributors
+
+- **Dejotaerre** — project creator and maintainer.
+- **OpenAI Codex** — AI assistance with implementation, testing and documentation, under the maintainer's direction.

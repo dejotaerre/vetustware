@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "magazines.h"
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -13,10 +14,10 @@ static void fail(const QString &text){throw std::runtime_error(text.toStdString(
 void Magazines::load(const QString &library){
     base=library+"/Revistas";catalog={};loadError.clear();
     QFile f(base+"/revistas.json");if(!f.exists())return;
-    if(f.size()>4*1024*1024||!f.open(QIODevice::ReadOnly)){loadError="No se puede leer el catálogo de revistas.";return;}
+    if(f.size()>4*1024*1024||!f.open(QIODevice::ReadOnly)){loadError="Cannot read the magazine catalog.";return;}
     const auto doc=QJsonDocument::fromJson(f.readAll());
     if(!doc.isObject()||doc["format"].toInt()!=1||!doc["series"].isArray()||!doc["entries"].isArray()){
-        loadError="El catálogo de revistas no es válido.";return;
+        loadError="The magazine catalog is invalid.";return;
     }
     catalog=doc.object();
 }
@@ -43,35 +44,35 @@ QVariantList Magazines::issues(const QString &series) const{
     return result;
 }
 QJsonObject Magazines::entry(const QString &id) const{
-    if(!QRegularExpression("^[A-Za-z0-9_-]{1,80}$").match(id).hasMatch())fail("Identificador de revista inválido.");
+    if(!QRegularExpression("^[A-Za-z0-9_-]{1,80}$").match(id).hasMatch())fail(uiText("Invalid magazine identifier."));
     for(auto v:catalog["entries"].toArray())if(v.toObject()["id"]==id)return v.toObject();
-    fail("Esta revista ya no está disponible.");return {};
+    fail(uiText("This magazine is no longer available."));return {};
 }
 QString Magazines::pdf(const QString &id) const{
     const auto e=entry(id);const QString path=resolve(e["path"].toString());
-    if(e["kind"]!="pdf"||!QFileInfo(path).isFile()||QFileInfo(path).suffix().compare("pdf",Qt::CaseInsensitive)!=0)fail("No se encuentra la revista. Comprueba que el disco de la biblioteca esté conectado.");
+    if(e["kind"]!="pdf"||!QFileInfo(path).isFile()||QFileInfo(path).suffix().compare("pdf",Qt::CaseInsensitive)!=0)fail(uiText("The magazine was not found. Check that the library drive is connected."));
     return path;
 }
 QString Magazines::prepareDos(const QString &id,const QString &workingRoot) const{
     const auto e=entry(id);const QString relative=e["path"].toString(),revision=e["revision"].toString();
-    if(e["kind"]!="dos"||(relative!="BBD"&&relative!="GameBytes")||!QRegularExpression("^[a-f0-9]{64}$").match(revision).hasMatch())fail("La revista DOS no tiene un perfil válido.");
+    if(e["kind"]!="dos"||(relative!="BBD"&&relative!="GameBytes")||!QRegularExpression("^[a-f0-9]{64}$").match(revision).hasMatch())fail(uiText("The DOS magazine does not have a valid profile."));
     const QString source=resolve(relative);
-    if(!QFileInfo(source+"/run.bat").isFile()||source.isEmpty())fail("Faltan los archivos de la revista DOS. Comprueba el disco de la biblioteca.");
-    if(QFileInfo(workingRoot).isSymLink()||!QDir().mkpath(workingRoot))fail("No se puede preparar la carpeta local de revistas.");
+    if(!QFileInfo(source+"/run.bat").isFile()||source.isEmpty())fail(uiText("The DOS magazine files are missing. Check the library drive."));
+    if(QFileInfo(workingRoot).isSymLink()||!QDir().mkpath(workingRoot))fail(uiText("Cannot prepare the local magazines folder."));
     const QString target=workingRoot+'/'+relative+'-'+revision.left(16);
-    if(QFileInfo(target).isSymLink())fail("La copia local de revistas contiene un enlace no permitido.");
+    if(QFileInfo(target).isSymLink())fail(uiText("The local magazine copy contains a disallowed link."));
     if(QFileInfo(target+"/.ready").isFile()&&QFileInfo(target+"/run.bat").isFile())return target;
-    if(QFileInfo::exists(target))fail("La copia local de la revista está incompleta. Consérvala aparte antes de volver a prepararla.");
-    QTemporaryDir staging(workingRoot+"/.preparando-XXXXXX");if(!staging.isValid())fail("No se pudo crear la copia de trabajo de la revista.");
+    if(QFileInfo::exists(target))fail(uiText("The local magazine copy is incomplete. Keep it separately before preparing it again."));
+    QTemporaryDir staging(workingRoot+"/.preparando-XXXXXX");if(!staging.isValid())fail(uiText("Could not create the magazine's working copy."));
     // DOS escribe únicamente en la copia local; la biblioteca compartida queda intacta.
     QDirIterator it(source,QDir::AllEntries|QDir::Hidden|QDir::System|QDir::NoDotAndDotDot,QDirIterator::Subdirectories);
     while(it.hasNext()){
         it.next();const auto info=it.fileInfo();const QString destination=staging.path()+'/'+QDir(source).relativeFilePath(info.filePath());
-        if(info.isSymLink())fail("La revista contiene un enlace no permitido.");
-        if(info.isDir()){if(!QDir().mkpath(destination))fail("No se pudo crear una carpeta de la revista.");}
-        else if(!info.isFile()||!QDir().mkpath(QFileInfo(destination).absolutePath())||!QFile::copy(info.filePath(),destination))fail("No se pudo copiar la revista. Comprueba el espacio disponible.");
+        if(info.isSymLink())fail(uiText("The magazine contains a disallowed link."));
+        if(info.isDir()){if(!QDir().mkpath(destination))fail(uiText("Could not create a magazine folder."));}
+        else if(!info.isFile()||!QDir().mkpath(QFileInfo(destination).absolutePath())||!QFile::copy(info.filePath(),destination))fail(uiText("Could not copy the magazine. Check the available space."));
     }
-    QFile marker(staging.path()+"/.ready");if(!marker.open(QIODevice::WriteOnly)||marker.write(revision.toUtf8())!=revision.size())fail("No se pudo completar la copia de la revista.");marker.close();
-    if(!QDir().rename(staging.path(),target))fail("No se pudo guardar la copia de la revista.");
+    QFile marker(staging.path()+"/.ready");if(!marker.open(QIODevice::WriteOnly)||marker.write(revision.toUtf8())!=revision.size())fail(uiText("Could not complete the magazine copy."));marker.close();
+    if(!QDir().rename(staging.path(),target))fail(uiText("Could not save the magazine copy."));
     return target;
 }

@@ -1,4 +1,5 @@
 #include "backend.h"
+#include "i18n.h"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QFile>
@@ -13,6 +14,17 @@
 #include <QQuickStyle>
 #include <QSignalSpy>
 #include <QWheelEvent>
+
+class LocalizedEngine : public QQmlApplicationEngine {
+public:
+    QTemporaryDir settings;
+    Languages languages;
+    ~LocalizedEngine(){for(auto object:rootObjects())delete object;}
+    LocalizedEngine():languages(settings.path(),QStringLiteral(VETUST_SOURCE)+"/../translations"){
+        rootContext()->setContextProperty("languages",&languages);
+        connect(&languages,&Languages::changed,this,&QQmlEngine::retranslate);
+    }
+};
 
 static const QString Seed="67bdc1a5-86ff-4cc8-a8e1-293a97de6e95";
 struct Fixture {
@@ -63,6 +75,51 @@ class HomeTests:public QObject {
     Q_OBJECT
 private slots:
     void initTestCase(){QQuickStyle::setStyle("Basic");}
+    void interfaceLanguageUi(){
+        Fixture f;f.backend->selectGame("2");f.backend->setSpanish(false);LocalizedEngine engine;
+        connect(&engine.languages,&Languages::changed,f.backend.get(),&Backend::retranslate);
+        engine.rootContext()->setContextProperty("vetust",f.backend.get());
+        engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);
+        window->resize(1480,920);
+        auto dialog=window->findChild<QObject*>("emulatorDialog");QVERIFY(dialog);
+        auto search=window->findChild<QObject*>("searchField");QVERIFY(search);
+        auto picker=window->findChild<QObject*>("languagePicker");QVERIFY(picker);
+        auto style=window->findChild<QObject*>("imageStylePicker");QVERIFY(style);
+        auto editions=window->findChild<QObject*>("editionPicker");QVERIFY(editions);
+        QCOMPARE(editions->property("currentText").toString(),QString("original"));
+        const auto edition=f.backend->selected()["spanish"];
+        search->setProperty("text","Monkey");
+        QVERIFY(QMetaObject::invokeMethod(window,"applyFilter"));
+        const int count=f.backend->count();
+        QVERIFY(QMetaObject::invokeMethod(dialog,"begin",Q_ARG(QVariant,QVariant(true))));
+        QTest::qWait(150);
+        QCOMPARE(dialog->property("title").toString(),QString("Global emulation settings"));
+        QCOMPARE(style->property("displayText").toString(),QString("Sharp"));
+        const auto draft=dialog->property("draft").toMap();
+        const QString screenshots=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
+        if(!screenshots.isEmpty())QVERIFY(window->grabWindow().save(screenshots+"/settings-en.png"));
+        picker->setProperty("currentIndex",1);
+        QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,1)));
+        QTRY_COMPARE(engine.languages.current(),QString("es"));
+        QCOMPARE(dialog->property("title").toString(),QString("Ajustes globales de emulación"));
+        QCOMPARE(style->property("displayText").toString(),QString("Nítido"));
+        QCOMPARE(search->property("text").toString(),QString("Monkey"));
+        QCOMPARE(f.backend->count(),count);QCOMPARE(f.backend->selected()["spanish"],edition);
+        QCOMPARE(editions->property("currentText").toString(),QString("original"));
+        QCOMPARE(dialog->property("draft").toMap(),draft);
+        QCOMPARE(f.row("adventure")["title"].toString(),QString("Aventuras gráficas"));
+        QTest::qWait(150);
+        if(!screenshots.isEmpty())QVERIFY(window->grabWindow().save(screenshots+"/settings-es.png"));
+        picker->setProperty("currentIndex",0);
+        QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,0)));
+        QCOMPARE(engine.languages.current(),QString("en"));
+        QCOMPARE(f.row("adventure")["title"].toString(),QString("Graphic adventures"));
+        QCOMPARE(dialog->property("title").toString(),QString("Global emulation settings"));
+        QCOMPARE(dialog->property("draft").toMap(),draft);
+    }
     void collectionsAndPagination(){
         Fixture f;auto &b=*f.backend;
         QVERIFY(!f.row("recommendations").isEmpty());QVERIFY(f.row("recent").isEmpty());QVERIFY(f.row("favorites").isEmpty());
@@ -96,7 +153,7 @@ private slots:
     void consoleLaunch(){
         Fixture f(false,true);auto &b=*f.backend;b.selectGame(Seed);
         b.openConsole();QVERIFY(b.busy());QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),5000);
-        QVERIFY(b.status().startsWith("Consola cerrada"));QVERIFY(f.row("recent").isEmpty());
+        QVERIFY(b.status().startsWith("Console closed"));QVERIFY(f.row("recent").isEmpty());
         QSqlQuery query(QSqlDatabase::database("vetust-native"));QVERIFY(query.exec("SELECT COUNT(*) FROM games WHERE last_played > 0"));QVERIFY(query.next());QCOMPARE(query.value(0).toInt(),0);
         QDir spanish(f.temp.path()+"/config/sessions/"+Seed+"-es");
         const auto configs=spanish.entryList({"vetust-console-*.conf"},QDir::Files);QCOMPARE(configs.size(),1);
@@ -105,14 +162,14 @@ private slots:
         QVERIFY(QFileInfo::exists(f.temp.path()+"/logs/"+Seed+"-es-console-native.log"));
         b.setSpanish(false);b.openConsole();QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),5000);
         QDir original(f.temp.path()+"/config/sessions/"+Seed);QCOMPARE(original.entryList({"vetust-console-*.conf"},QDir::Files).size(),1);
-        QVERIFY(!b.xTreeAvailable());b.openConsole("xtree");QVERIFY(!b.busy());QVERIFY(b.status().contains("no está instalado"));
+        QVERIFY(!b.xTreeAvailable());b.openConsole("xtree");QVERIFY(!b.busy());QVERIFY(b.status().contains("is not installed"));
         const QString tools=f.temp.path()+"/runtime/dos-tools/xtgold";QDir().mkpath(tools);
         for(const QString &name:QStringList{"xtgold.com","xtg.exe","XTREE.BAT"}){QFile file(tools+'/'+name);QVERIFY(file.open(QIODevice::WriteOnly));file.write("prueba");}
         QVERIFY(b.xTreeAvailable());b.openConsole("xtree");QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),5000);QVERIFY(f.row("recent").isEmpty());
         bool launchesXTree=false;
         for(const QString &name:original.entryList({"vetust-console-*.conf"},QDir::Files)){QFile file(original.filePath(name));QVERIFY(file.open(QIODevice::ReadOnly));if(file.readAll().contains("T:\\XTGOLD.COM C: /R"))launchesXTree=true;}
         QVERIFY(launchesXTree);
-        QVERIFY(!b.nortonAvailable());b.openConsole("norton");QVERIFY(!b.busy());QVERIFY(b.status().contains("no está instalado"));
+        QVERIFY(!b.nortonAvailable());b.openConsole("norton");QVERIFY(!b.busy());QVERIFY(b.status().contains("is not installed"));
         const QString nc=f.temp.path()+"/runtime/dos-tools/norton";QDir().mkpath(nc);
         for(const QString &name:QStringList{"NC.EXE","NCMAIN.EXE"}){QFile file(nc+'/'+name);QVERIFY(file.open(QIODevice::WriteOnly));file.write("prueba");}
         QVERIFY(b.nortonAvailable());b.openConsole("norton");QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),5000);QVERIFY(f.row("recent").isEmpty());
@@ -144,7 +201,7 @@ private slots:
         plan=backend.prepare(game,profile,"staging",{},[](int){},true);QVERIFY2(plan.error.isEmpty(),qPrintable(plan.error));
         QFile relocated(plan.config);QVERIFY(relocated.open(QIODevice::ReadOnly));const auto text=relocated.readAll();QVERIFY(text.contains(external.path().toUtf8()));QVERIFY(!text.contains("${GAMES}"));
         const QString absent=external.path()+"-offline";QVERIFY(QDir().rename(external.path(),absent));
-        plan=backend.prepare(game,profile,"staging",{},[](int){});QVERIFY(plan.error.contains("no está disponible"));QVERIFY(!QFileInfo::exists(external.path()));
+        plan=backend.prepare(game,profile,"staging",{},[](int){});QVERIFY(plan.error.contains("is unavailable"));QVERIFY(!QFileInfo::exists(external.path()));
         QVERIFY(QDir().rename(absent,external.path()));
     }
     void restorePersonalizedEdition(){
@@ -173,7 +230,7 @@ private slots:
         profile["preparedRoot"]="../escape";plan=backend.prepare(game,profile,"staging",{},[](int){});QVERIFY(!plan.error.isEmpty());
     }
     void monitorSettingsUi(){
-        QQmlApplicationEngine engine;
+        LocalizedEngine engine;
         engine.loadData(R"QML(
 import QtQuick
 import QtQuick.Controls
@@ -202,12 +259,12 @@ ApplicationWindow {
         window->setProperty("screens",QVariantList{a});QVERIFY(!section->isVisible());
         window->setProperty("screens",QVariantList{a,b});QTRY_VERIFY(section->isVisible());QCOMPARE(picker->property("currentIndex").toInt(),2);
         window->setProperty("screens",QVariantList{b,a});QCOMPARE(picker->property("currentIndex").toInt(),1);
-        window->setProperty("screens",QVariantList{a});QVERIFY(!section->isVisible());QVERIFY(picker->property("currentText").toString().contains("Desconectado"));
+        window->setProperty("screens",QVariantList{a});QVERIFY(!section->isVisible());QVERIFY(picker->property("currentText").toString().contains("Disconnected"));
         window->setProperty("screens",QVariantList{a,b});QCOMPARE(picker->property("currentIndex").toInt(),2);
         QVERIFY(begin(false));QVERIFY(!section->isVisible());
     }
     void imageStyleUi(){
-        Fixture f;QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());
+        Fixture f;LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());
         engine.loadData(R"QML(
 import QtQuick
 import QtQuick.Controls
@@ -221,16 +278,16 @@ ApplicationWindow {
         auto begin=[&](bool global){return QMetaObject::invokeMethod(window,"begin",Q_ARG(QVariant,QVariant(global)));};
         QVERIFY(begin(true));QTest::qWait(100);
         auto picker=window->findChild<QQuickItem*>("imageStylePicker");auto dialog=window->findChild<QObject*>("emulatorDialog");QVERIFY(picker&&dialog);
-        QVERIFY(picker->isVisible());QCOMPARE(picker->property("currentText").toString(),QString("Nítido"));
+        QVERIFY(picker->isVisible());QCOMPARE(picker->property("displayText").toString(),QString("Sharp"));
         auto choose=[&](int index){picker->setProperty("currentIndex",index);return QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,index));};
         auto save=[&](bool global){return f.backend->saveEmulatorSettings(global,f.backend->selected()["id"].toString(),dialog->property("draft").toMap(),dialog->property("paths").toMap());};
         QVERIFY(choose(1));QCOMPARE(save(true),QString());
-        QVERIFY(begin(true));QCOMPARE(picker->property("currentText").toString(),QString("Nítido"));
-        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Usar ajuste global · Nítido"));
+        QVERIFY(begin(true));QCOMPARE(picker->property("displayText").toString(),QString("Sharp"));
+        QVERIFY(begin(false));QCOMPARE(picker->property("displayText").toString(),QString("Use global setting · Sharp"));
         QVERIFY(choose(1));QCOMPARE(save(false),QString());
-        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Monitor clásico (CRT)"));
+        QVERIFY(begin(false));QCOMPARE(picker->property("displayText").toString(),QString("Classic monitor (CRT)"));
         QVERIFY(choose(0));QCOMPARE(save(false),QString());
-        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Usar ajuste global · Nítido"));
+        QVERIFY(begin(false));QCOMPARE(picker->property("displayText").toString(),QString("Use global setting · Sharp"));
         dialog->setProperty("editEngine","classic");QVERIFY(!picker->isVisible());
     }
     void magazinesUiAndLaunch(){
@@ -244,10 +301,10 @@ ApplicationWindow {
         f.backend=std::make_unique<Backend>(f.temp.path());auto &b=*f.backend;
         QSignalSpy ready(&b,&Backend::extraReady);b.openMagazine("uno");QCOMPARE(ready.size(),1);QCOMPARE(ready[0][0].toUrl(),QUrl::fromLocalFile(base+"/CGW/uno.pdf"));QVERIFY(ready[0][2].toBool());
         QCOMPARE(b.saveEmulatorSettings(true,"",{{"engine","classic"},{"options",QVariantMap{{"classic",QVariantMap{{"cpu.cycles","9000"}}}}}},{{"classic","/usr/bin/true"}}),QString());
-        b.openMagazine("BBD");QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),10000);QVERIFY(b.status().startsWith("Revista cerrada"));QVERIFY(f.row("recent").isEmpty());
+        b.openMagazine("BBD");QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),10000);QVERIFY(b.status().startsWith("Magazine closed"));QVERIFY(f.row("recent").isEmpty());
         QDir configs(f.temp.path()+"/config/sessions/revistas");const auto names=configs.entryList({"*.conf"},QDir::Files);QCOMPARE(names.size(),1);
         QFile config(configs.filePath(names.first()));QVERIFY(config.open(QIODevice::ReadOnly));const auto text=config.readAll();QVERIFY(text.contains("cycles=9000"));QVERIFY(text.contains("/data/magazines/BBD-"));QVERIFY(!text.contains("/source/Revistas"));QVERIFY(text.contains("call run.bat"));
-        QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",&b);engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",&b);engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
         auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->resize(1050,720);
         QVERIFY(QMetaObject::invokeMethod(window,"navigate",Q_ARG(QVariant,QVariant("magazines"))));QTest::qWait(150);
         auto grid=window->findChild<QQuickItem*>("magazinesGrid"),search=window->findChild<QQuickItem*>("searchField");QVERIFY(grid&&search);QCOMPARE(grid->property("count").toInt(),2);
@@ -264,7 +321,7 @@ ApplicationWindow {
         const QJsonArray entries{QJsonObject{{"name","Mapa.pdf"},{"kind","Documento"},{"bytes",100}},QJsonObject{{"name","Foto.png"},{"kind","Imagen"},{"bytes",200}}};
         index.write(QJsonDocument(QJsonObject{{"format",1},{"games",QJsonObject{{Seed,entries}}}}).toJson());index.close();
         f.backend=std::make_unique<Backend>(f.temp.path());
-        QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
         engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
         auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->resize(1050,720);window->requestActivate();QTest::qWait(150);
         QVERIFY(QMetaObject::invokeMethod(window,"openGame",Q_ARG(QVariant,QVariant(Seed))));
@@ -279,7 +336,7 @@ ApplicationWindow {
         f.backend->selectGame("1");QTRY_VERIFY(!button->isVisible());
     }
     void uiSearchAndDetails(){
-        Fixture f;QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        Fixture f;LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
         engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
         auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->requestActivate();QTest::qWait(300);
         QCOMPARE(window->property("view").toString(),QString("home"));

@@ -1,5 +1,12 @@
 # Cambios de VETUSTware
 
+## Unreleased
+
+- English interface by default, with Spanish selectable live in Settings.
+- Persistent interface language independent of game editions and emulation settings.
+- Community JSON translations, validation helper and English contributor guide.
+
+
 ## 0.3.2 — 2026-10-31
 
 - Nueva sección Revistas con colecciones, portadas locales, búsqueda y navegación
