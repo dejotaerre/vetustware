@@ -10,7 +10,7 @@ pensada para disfrutar de la colección. No necesita un navegador ni una cuenta.
 *Native Linux frontend for local DOS game collections, with DOSBox profiles,
 artwork, manuals and portable libraries. The current interface is in Spanish.*
 
-![Inicio de VETUSTware](docs/images/inicio.png)
+![Inicio de VETUSTware 0.3.2 con selecciones y categorías](docs/images/inicio.png)
 
 [Descargar 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
 · [Instalación](INSTALACION.md)
@@ -39,10 +39,33 @@ Desde 0.3.2, **Revistas** permite explorar colecciones con portadas, lectura
 PDF integrada y revistas electrónicas mediante DOSBox. El material se aporta
 en `Revistas/` dentro de la biblioteca; no se incluye en el motor. Consulta [su formato](docs/BIBLIOTECAS.md#revistas-opcionales).
 
-![Ficha de un juego](docs/images/ficha.png)
+Capturas de la interfaz de **VETUSTware 0.3.2**.
 
-Las capturas ilustran una biblioteca aportada localmente. Los juegos, imágenes
-y manuales que aparecen no se incluyen en el programa ni en sus descargas.
+**Ficha del juego:** selección de edición, manual, extras y configuración individual.
+
+![Ficha de Larry 7 con la edición en español seleccionada](docs/images/ficha.png)
+
+**Revistas:** colecciones de publicaciones en PDF y revistas electrónicas para DOS.
+
+![Colecciones de la sección Revistas](docs/images/revistas.png)
+
+<details>
+<summary>Ver los ajustes y el visor PDF</summary>
+
+**Ajustes:** pantalla completa con un interruptor, imagen Nítida por defecto y
+opciones avanzadas plegadas. El selector de monitor aparece cuando se detecta
+más de uno; esta captura corresponde a una sola pantalla.
+
+![Ajustes globales de emulación](docs/images/ajustes.png)
+
+**Lectura integrada:** navegación por páginas, ajuste al ancho y cierre con la X.
+
+![Manual en español de Larry 7 en el visor PDF](docs/images/visor-pdf.png)
+
+</details>
+
+Las capturas ilustran una biblioteca aportada localmente. Los juegos, imágenes,
+manuales y revistas que aparecen no se incluyen en el programa ni en sus descargas.
 
 ## Empezar
 
