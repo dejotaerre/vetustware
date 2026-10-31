@@ -11,15 +11,13 @@ interface designed for exploring your collection. No browser or account needed.
 
 ![VETUSTware home screen in English, with recommendations and favorites](docs/images/en/home.png)
 
-[Download 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
-· [Installation guide (Spanish)](INSTALACION.md)
+[Download 0.3.3](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.3)
+· [Installation guide](INSTALLATION.md)
 · [Library format (Spanish)](docs/BIBLIOTECAS.md)
 · [Report an issue](https://github.com/dejotaerre/vetustware/issues)
 
-**Development preview:** the screenshots below show the current English
-interface. The published **0.3.2** package still has the Spanish interface.
-To use the new language selector before the next release, [build the current
-source](#build-and-test).
+**New in 0.3.3:** English is the default interface language, with Spanish
+available in **Settings → Interface language**. The screenshots show the English interface.
 
 ## What you can do
 
@@ -74,14 +72,14 @@ and magazines shown are not included with the application or its downloads.
 
 ## Get started
 
-Version **0.3.2 is a preview release for Linux x86_64**. The published executable
+Version **0.3.3 is a preview release for Linux x86_64**. The published executable
 was built and tested on **CachyOS with Qt 6.12**. It is not a universal package:
 you need compatible system libraries. Source builds are available for other
 distributions, but compatibility still needs testing.
 
-1. Install the dependencies listed in [INSTALACION.md (Spanish)](INSTALACION.md)
+1. Install the dependencies listed in [INSTALLATION.md](INSTALLATION.md)
    and a DOSBox emulator. Most profile work has used DOSBox Staging.
-2. Download and extract `vetustware-0.3.2-linux-x86_64.tar.gz` from
+2. Download and extract `vetustware-0.3.3-linux-x86_64.tar.gz` from
    [Releases](https://github.com/dejotaerre/vetustware/releases).
 3. Inside the extracted folder, run:
 
@@ -117,7 +115,7 @@ game folders or ISOs. See the [library format (Spanish)](docs/BIBLIOTECAS.md).
 
 ## Interface languages
 
-The current source defaults to **English**. Select **Settings → Interface
+VETUSTware defaults to **English**. Select **Settings → Interface
 language → Español** to switch to Spanish. Changes apply immediately and are
 saved for future sessions. Game editions, emulation settings and saves are
 independent of the interface language.
@@ -128,8 +126,7 @@ for the format, validation and preview instructions. Missing translations fall
 back to English.
 
 Game descriptions, manuals, magazine content and other imported material retain
-their original languages. The language selector is a development feature and
-is not included in the published 0.3.2 package.
+their original languages. The language selector is included from version 0.3.3.
 
 ## Build and test
 
@@ -150,7 +147,7 @@ navigation, translations and language persistence.
 
 ## Status and limitations
 
-- The current source includes English and Spanish interfaces; imported names and descriptions depend on the library.
+- Version 0.3.3 includes English and Spanish interfaces; imported names and descriptions depend on the library.
 - Each game may require a particular DOSBox engine or specific settings. Importing a profile does not verify its compatibility.
 - Linux desktops with X11 or XWayland are supported; other platforms and native Wayland have not been validated for this version.
 - Monitor selection depends on the emulator and the desktop environment.

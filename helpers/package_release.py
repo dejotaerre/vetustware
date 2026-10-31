@@ -12,14 +12,14 @@ import tarfile
 import tempfile
 import time
 
-VERSION = '0.3.2'
+VERSION = '0.3.3'
 NATIVE = '''CMakeLists.txt Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml
 archive.cpp archive.h archive_tests.cpp backend.cpp backend.h backend_magazines.cpp
 magazines.cpp magazines.h magazines_tests.cpp displays.cpp displays.h
 emulation.cpp emulation.h emulation_tests.cpp home.cpp home_tests.cpp main.cpp
 storage.cpp storage.h extras.cpp extras.h extras_tests.cpp icon.svg i18n.cpp i18n.h i18n_tests.cpp'''.split()
 HELPERS = ['install.py', 'catalog_index.py', 'import_library.py', 'package_release.py', 'check_translations.py']
-DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'CHANGELOG.md', 'docs/BIBLIOTECAS.md', 'docs/TRANSLATING.md']
+DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'INSTALLATION.md', 'CHANGELOG.md', 'docs/BIBLIOTECAS.md', 'docs/TRANSLATING.md']
 
 
 def sha(path):

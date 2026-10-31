@@ -11,7 +11,7 @@ pensada para disfrutar de la colección. No necesita un navegador ni una cuenta.
 
 ![Inicio de VETUSTware 0.3.2 con selecciones y categorías](docs/images/inicio.png)
 
-[Descargar 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
+[Descargar 0.3.3](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.3)
 · [Instalación](INSTALACION.md)
 · [Bibliotecas](docs/BIBLIOTECAS.md)
 · [Reportar un problema](https://github.com/dejotaerre/vetustware/issues)
@@ -68,7 +68,7 @@ manuales y revistas que aparecen no se incluyen en el programa ni en sus descarg
 
 ## Empezar
 
-La versión **0.3.2 es una versión de prueba para Linux x86_64**.
+La versión **0.3.3 es una versión de prueba para Linux x86_64**.
 El ejecutable publicado se compiló y probó en **CachyOS con Qt 6.12**. No es un
 paquete universal: necesita bibliotecas compatibles del sistema. El código
 fuente permite compilar en otras distribuciones; su compatibilidad todavía
@@ -76,7 +76,7 @@ requiere pruebas.
 
 1. Instala las dependencias indicadas en [INSTALACION.md](INSTALACION.md) y un
    emulador DOSBox. Los perfiles se han trabajado principalmente con DOSBox Staging.
-2. Descarga y extrae `vetustware-0.3.2-linux-x86_64.tar.gz` desde
+2. Descarga y extrae `vetustware-0.3.3-linux-x86_64.tar.gz` desde
    [Releases](https://github.com/dejotaerre/vetustware/releases).
 3. Dentro de la carpeta extraída, ejecuta:
 
@@ -128,7 +128,7 @@ Incluyen extracción ZIP, catálogo, emulación y navegación de la interfaz.
 
 ## Estado y límites
 
-- La versión publicada 0.3.2 tiene la interfaz en español. El código en desarrollo incorpora inglés predeterminado y español seleccionable; los nombres y descripciones importados dependen de la biblioteca.
+- La versión 0.3.3 incorpora inglés predeterminado y español seleccionable; los nombres y descripciones importados dependen de la biblioteca.
 - Cada juego puede requerir un motor DOSBox o ajustes específicos. Importar un perfil no verifica su compatibilidad.
 - Escritorio Linux con X11 o XWayland; otras plataformas y Wayland nativo no están validados en esta versión.
 - El selector de monitor depende de las capacidades del emulador y del entorno gráfico.
@@ -145,16 +145,15 @@ licencia MIT del código. Más información en [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Idiomas de la interfaz
 
-El código en desarrollo inicia la interfaz en inglés; puedes seleccionar español
+Desde la versión 0.3.3, la interfaz inicia en inglés; puedes seleccionar español
 desde **Settings → Interface language → Español**. La elección se aplica al
 instante y se guarda sin cambiar el idioma de los juegos ni las versiones especiales.
-Esta mejora todavía no forma parte de la descarga 0.3.2; para utilizarla, compila
-el código actual siguiendo los pasos anteriores.
+Esta mejora está incluida en la descarga 0.3.3.
 
 Cualquier colaborador puede añadir otro idioma mediante un archivo JSON, sin
 recompilar la aplicación. Consulta la [guía de traducción en inglés](docs/TRANSLATING.md).
 Las capturas en español de este documento corresponden a la versión 0.3.2;
-el [README en inglés](README.md) muestra la interfaz actual en desarrollo.
+el [README en inglés](README.md) muestra la interfaz de la versión 0.3.3.
 
 ## Colaboradores
 

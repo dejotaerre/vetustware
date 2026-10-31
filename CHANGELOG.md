@@ -1,11 +1,13 @@
 # Cambios de VETUSTware
 
-## Unreleased
+## 0.3.3 — 2026-10-31
 
 - English interface by default, with Spanish selectable live in Settings.
 - Persistent interface language independent of game editions and emulation settings.
 - Community JSON translations, validation helper and English contributor guide.
-
+- English README with new screenshots; Spanish README and screenshots preserved.
+- English installation instructions included in the download.
+- Installer preserves interface language and locally added translation files on update.
 
 ## 0.3.2 — 2026-10-31
 

@@ -1,4 +1,6 @@
-# VETUSTware — instalación de la versión de prueba 0.3.2
+# VETUSTware — instalación de la versión de prueba 0.3.3
+
+[English installation guide](INSTALLATION.md)
 
 Interfaz nativa para una colección local de juegos DOS con estructura eXoDOS.
 Licencia MIT: ver LICENSE. No requiere navegador ni servicios en línea.
@@ -83,7 +85,10 @@ en esa copia. Una carpeta presente pero incompleta nunca se sobrescribe
 automáticamente: se conserva para que el usuario pueda revisar sus archivos.
 
 Los perfiles importados no garantizan que todos los títulos funcionen con cada
-motor DOSBox; se pueden ajustar individualmente. La interfaz está en español.
+motor DOSBox; se pueden ajustar individualmente. La interfaz inicia en inglés.
+Para usar español, selecciona **Settings → Interface language → Español**.
+La elección se aplica al instante y se conserva al volver a abrir la aplicación.
+No cambia el idioma de los juegos, documentos ni revistas.
 
 ## Compilar desde las fuentes
 
@@ -109,13 +114,16 @@ La aplicación mantiene en su propia carpeta:
   copias jugables con sus partidas (data/games, salvo destino personalizado).
 - cache/, logs/ y backups/: archivos regenerables, registros y respaldos.
 - helpers/, runtime/: herramientas propias y posibles emuladores añadidos localmente.
+- translations/: traducciones de la interfaz en JSON; `config/interface.json` guarda el idioma elegido.
 
 Los juegos y las partidas permanecen en data/games o en la carpeta alternativa
 elegida por el usuario.
 Para actualizar, cerrar VETUSTware y DOSBox y ejecutar el instalador del nuevo
 paquete hacia el mismo destino. Se respaldan los archivos de programa anteriores;
 los ajustes, catálogo y partidas se conservan. Los runtimes existentes no se
-sobrescriben automáticamente.
+sobrescriben automáticamente. Las traducciones propias con otros nombres de
+archivo y el idioma seleccionado también se conservan. Los catálogos incluidos
+se actualizan, respaldando la copia anterior.
 
 En **Ajustes → Biblioteca y carpetas** se pueden cambiar las ubicaciones.
 Cambiar una ruta no mueve los archivos: copiar antes la carpeta de juegos completa,
