@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="V:&gt;_">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#30465c"/>
+      <stop offset="1" stop-color="#1c2b3b"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="122" height="122" rx="24" fill="url(#panel)" stroke="#9c8967" stroke-width="5"/>
+  <g transform="translate(3.2 0) scale(.95 1)">
+    <g stroke="#e9bd79" stroke-width="9" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M10 36 26 92 42 36"/>
+      <path d="M74 40 92 64 74 88"/>
+      <path d="M103 92h15"/>
+    </g>
+    <g fill="#e9bd79"><rect x="53" y="46" width="8" height="8"/><rect x="53" y="74" width="8" height="8"/></g>
+  </g>
+</svg>

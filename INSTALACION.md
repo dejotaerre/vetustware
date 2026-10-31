@@ -1,0 +1,144 @@
+# VETUSTware — instalación de la versión de prueba 0.3.0
+
+Interfaz nativa para una colección local de juegos DOS con estructura eXoDOS.
+Licencia MIT: ver LICENSE. No requiere navegador ni servicios en línea.
+
+## Qué contiene el paquete
+
+Programa, icono, instalador, importador de biblioteca y código fuente completo.
+No contiene juegos, ISOs, carátulas, manuales, partidas, favoritos, catálogo
+personal, configuración del autor, emuladores, XTree ni Norton Commander.
+El motor y la biblioteca se distribuyen por separado.
+
+El archivo linux-x86_64 incluye un ejecutable compilado en CachyOS con Qt 6.12.
+No es un binario universal para todas las distribuciones: necesita bibliotecas
+compatibles. BUILD_INFO.json identifica las versiones de compilación.
+El paquete de fuentes permite compilar en el equipo destinatario.
+
+## Instalación del paquete con ejecutable
+
+1. Instalar desde los repositorios de la distribución las dependencias:
+   Qt 6 (Quick, QuickControls2, Sql con controlador SQLite, Concurrent,
+   Pdf/PdfQuick y diálogos QML), libzip, SDL2, Python 3. Se necesita un escritorio
+   Linux con X11 o XWayland y OpenGL. El emulador se instala aparte.
+2. Extraer el archivo tar.gz en una carpeta temporal y abrir una terminal allí.
+3. Comprobar las bibliotecas e instalar:
+
+```sh
+ldd ./vetustware
+python3 helpers/install.py --desktop
+```
+
+Si ldd muestra «not found», instalar la biblioteca indicada. Si aparecen errores
+sobre versiones de Qt, GLIBC o GLIBCXX, compilar desde las fuentes como se explica
+abajo. No se necesita sudo para ejecutar el instalador de VETUSTware.
+
+El destino predeterminado es `~/vetustware`, calculado desde la home del usuario
+que instala. Para otro destino:
+
+```sh
+python3 helpers/install.py --dest "$HOME/Aplicaciones/vetustware" --desktop
+```
+
+No usar como destino la misma carpeta desde la que se ejecuta el instalador.
+Abrir VETUSTware desde el menú de aplicaciones o con:
+
+```sh
+"$HOME/vetustware/vetustware"
+```
+
+## Emulador
+
+Instalar DOSBox Staging, DOSBox clásico o DOSBox-X desde una fuente de confianza.
+Al instalar VETUSTware se busca `dosbox-staging`, `dosbox` o `dosbox-x` en PATH y
+se selecciona uno disponible, priorizando Staging. Revisar **Ajustes → Motor**.
+Si el ejecutable del emulador tiene otro nombre, indicar su ruta en
+**Opciones avanzadas → Ejecutable personalizado**.
+Si todavía no hay ningún emulador, VETUSTware permite organizar la biblioteca y
+avisa al intentar jugar. El programa no instala paquetes del sistema.
+
+## Primer inicio: elegir las carpetas
+
+El asistente pide la carpeta de la biblioteca, que puede estar en otro disco.
+Admite la colección base eXoDOS o una biblioteca personalizada de VETUSTware.
+La raíz debe conservar `Content/XODOSMetadata.zip`,
+`Content/!DOSmetadata_linux.zip` y `eXo/eXoDOS`.
+
+Una biblioteca personalizada incorpora `Personalizaciones/perfiles.zip`,
+`Personalizaciones/juegos.zip` y, opcionalmente, `herramientas.zip`.
+El motor reconoce su catálogo, ediciones e instrucciones automáticamente.
+Al pulsar **Jugar** o abrir la consola, extrae únicamente la edición elegida.
+XTree y Norton Commander se instalan desde los recursos de la biblioteca al
+abrir una consola, si están incluidos. No forman parte del motor MIT.
+
+Las copias jugables y sus partidas van por defecto a `data/games` dentro de la
+instalación del motor. En el asistente se puede activar la opción para elegir
+otra carpeta. No se presupone que exista `Juegos`, `Games` ni otro nombre.
+La carpeta de la biblioteca permanece intacta durante el uso, por lo que puede
+mantenerse compartida por torrent sin que las partidas alteren sus archivos.
+
+Borrar una copia jugable permite recuperarla desde la biblioteca al abrirla de
+nuevo, pero también borra las partidas o cambios posteriores que solo existan
+en esa copia. Una carpeta presente pero incompleta nunca se sobrescribe
+automáticamente: se conserva para que el usuario pueda revisar sus archivos.
+
+Los perfiles importados no garantizan que todos los títulos funcionen con cada
+motor DOSBox; se pueden ajustar individualmente. La interfaz está en español.
+
+## Compilar desde las fuentes
+
+Se requiere un compilador C++20, CMake >= 3.21, pkg-config y los paquetes de
+desarrollo de Qt >= 6.5 (incluido Qt Test), libzip y SDL2.
+
+```sh
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j 4
+ctest --test-dir native/build --output-on-failure
+python3 helpers/install.py --desktop
+```
+
+El instalador utiliza el binario recién compilado si existe en native/build.
+No se necesitan juegos para ejecutar las pruebas incluidas.
+
+## Datos, actualizaciones y cambio de disco
+
+La aplicación mantiene en su propia carpeta:
+
+- config/: ajustes, ubicaciones y configuraciones DOSBox.
+- data/: catálogo importado, favoritos, historial, carátulas, manuales y las
+  copias jugables con sus partidas (data/games, salvo destino personalizado).
+- cache/, logs/ y backups/: archivos regenerables, registros y respaldos.
+- helpers/, runtime/: herramientas propias y posibles emuladores añadidos localmente.
+
+Los juegos y las partidas permanecen en data/games o en la carpeta alternativa
+elegida por el usuario.
+Para actualizar, cerrar VETUSTware y DOSBox y ejecutar el instalador del nuevo
+paquete hacia el mismo destino. Se respaldan los archivos de programa anteriores;
+los ajustes, catálogo y partidas se conservan. Los runtimes existentes no se
+sobrescriben automáticamente.
+
+En **Ajustes → Biblioteca y carpetas** se pueden cambiar las ubicaciones.
+Cambiar una ruta no mueve los archivos: copiar antes la carpeta de juegos completa,
+incluidos los archivos ocultos y las partidas. Si falta un disco, reconectarlo o
+localizarlo de nuevo. No se borra el catálogo por una desconexión.
+
+Para mover la aplicación, cerrar y copiar su carpeta completa; actualizar el
+acceso del escritorio para que apunte a la nueva ubicación. Las bibliotecas
+compartidas necesarias deben seguir disponibles en el sistema.
+
+## Compartir
+
+Compartir el archivo de distribución limpio y su SHA256, no comprimir una
+instalación ya utilizada: después de importar y jugar, config/ y data/ contienen
+información del usuario. La distribución de las dependencias y de los contenidos
+ajenos se rige por sus propias licencias; ver THIRD_PARTY.md.
+
+## Diagnóstico
+
+```sh
+"$HOME/vetustware/vetustware" --diagnostics
+```
+
+El diagnóstico muestra rutas del usuario. Revisarlo antes de publicarlo.
+Esta versión se ha probado en el sistema indicado en BUILD_INFO.json; las pruebas
+en otras distribuciones siguen siendo necesarias antes de anunciar compatibilidad.

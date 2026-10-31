@@ -1,0 +1,32 @@
+# Compilación y archivos generados.
+/build/
+/native/build/
+**/CMakeFiles/
+**/CMakeCache.txt
+__pycache__/
+*.py[cod]
+
+# Datos de una instalación usada y contenidos de bibliotecas.
+/data/
+/config/
+/cache/
+/logs/
+/backups/
+/runtime/
+/Content/
+/eXo/
+/Personalizaciones/
+/dist/
+/vetustware
+/vetustware.install
+*.sqlite*
+*.iso
+*.bin
+*.zip
+*.tar.gz
+*.tar.xz
+
+# Configuración local de editores.
+.vscode/
+.idea/
+*.swp
