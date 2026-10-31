@@ -1,4 +1,4 @@
-# VETUSTware — instalación de la versión de prueba 0.3.1
+# VETUSTware — instalación de la versión de prueba 0.3.2
 
 Interfaz nativa para una colección local de juegos DOS con estructura eXoDOS.
 Licencia MIT: ver LICENSE. No requiere navegador ni servicios en línea.
@@ -6,7 +6,7 @@ Licencia MIT: ver LICENSE. No requiere navegador ni servicios en línea.
 ## Qué contiene el paquete
 
 Programa, icono, instalador, importador de biblioteca y código fuente completo.
-No contiene juegos, ISOs, carátulas, manuales, partidas, favoritos, catálogo
+No contiene juegos, ISOs, revistas, carátulas, manuales, partidas, favoritos, catálogo
 personal, configuración del autor, emuladores, XTree ni Norton Commander.
 El motor y la biblioteca se distribuyen por separado.
 
@@ -159,3 +159,31 @@ No se modifican los juegos, sus perfiles ni las partidas.
 Una biblioteca sin complementos sigue funcionando. La versión 0.3.0 puede usar
 los juegos de una biblioteca ampliada, pero requiere actualizarse a 0.3.1 para
 mostrar el botón Extras.
+
+
+## Revistas (desde 0.3.2)
+
+La sección **Revistas** reconoce `Revistas/revistas.json` dentro de la biblioteca.
+Muestra las colecciones y sus portadas locales, con búsqueda y lectura PDF en el
+visor integrado. El índice original de cada colección también está disponible.
+No se incluyen revistas ni portadas de terceros en este paquete.
+
+Big Blue Disk y Game Bytes se abren con sus menús originales mediante DOSBox.
+La primera apertura prepara una copia local en `data/magazines` dentro de la
+instalación; no escribe en la biblioteca compartida. Estas sesiones usan los
+ajustes globales de emulador y monitor y no se agregan al historial de juegos.
+Las copias locales pueden contener cambios propios: conservarlas si se desea
+mantener esos cambios. Una copia incompleta no se sobrescribe automáticamente.
+
+Para preparar o trasladar una biblioteca, consulta `docs/BIBLIOTECAS.md`.
+
+## Estilo de imagen (desde 0.3.2)
+
+Con DOSBox Staging, **Ajustes → Estilo de imagen** ofrece **Nítido** por defecto
+y **Monitor clásico (CRT)** como alternativa. Ambos conservan las proporciones:
+Nítido permite escalado fraccionario para aprovechar la pantalla y CRT usa el
+escalado apropiado para sus líneas de barrido. Se ha probado con Staging 0.83.
+La configuración de cada juego puede elegir otro estilo o volver al global.
+
+El visor PDF usa una X para cerrar, centra las páginas verticales y abre cada
+documento desde su primera página. También puede cerrarse con Escape.

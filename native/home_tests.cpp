@@ -206,6 +206,57 @@ ApplicationWindow {
         window->setProperty("screens",QVariantList{a,b});QCOMPARE(picker->property("currentIndex").toInt(),2);
         QVERIFY(begin(false));QVERIFY(!section->isVisible());
     }
+    void imageStyleUi(){
+        Fixture f;QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());
+        engine.loadData(R"QML(
+import QtQuick
+import QtQuick.Controls
+ApplicationWindow {
+    width:1050; height:820; visible:true
+    EmulatorDialog {id:settings}
+    function begin(global) {settings.begin(global)}
+}
+)QML",QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/ImageStyleTest.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);
+        auto begin=[&](bool global){return QMetaObject::invokeMethod(window,"begin",Q_ARG(QVariant,QVariant(global)));};
+        QVERIFY(begin(true));QTest::qWait(100);
+        auto picker=window->findChild<QQuickItem*>("imageStylePicker");auto dialog=window->findChild<QObject*>("emulatorDialog");QVERIFY(picker&&dialog);
+        QVERIFY(picker->isVisible());QCOMPARE(picker->property("currentText").toString(),QString("Nítido"));
+        auto choose=[&](int index){picker->setProperty("currentIndex",index);return QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,index));};
+        auto save=[&](bool global){return f.backend->saveEmulatorSettings(global,f.backend->selected()["id"].toString(),dialog->property("draft").toMap(),dialog->property("paths").toMap());};
+        QVERIFY(choose(1));QCOMPARE(save(true),QString());
+        QVERIFY(begin(true));QCOMPARE(picker->property("currentText").toString(),QString("Nítido"));
+        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Usar ajuste global · Nítido"));
+        QVERIFY(choose(1));QCOMPARE(save(false),QString());
+        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Monitor clásico (CRT)"));
+        QVERIFY(choose(0));QCOMPARE(save(false),QString());
+        QVERIFY(begin(false));QCOMPARE(picker->property("currentText").toString(),QString("Usar ajuste global · Nítido"));
+        dialog->setProperty("editEngine","classic");QVERIFY(!picker->isVisible());
+    }
+    void magazinesUiAndLaunch(){
+        Fixture f;f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");
+        const QString base=f.temp.path()+"/source/Revistas";QDir().mkpath(base+"/BBD");QDir().mkpath(base+"/CGW");
+        auto write=[](const QString &path,const QByteArray &data){QFile file(path);if(!file.open(QIODevice::WriteOnly))qFatal("No se pudo escribir la revista de prueba");file.write(data);};
+        write(base+"/BBD/run.bat","echo Revista\n");write(base+"/CGW/uno.pdf","documento de prueba");
+        const QJsonObject collection{{"id","CGW"},{"title","Computer Gaming World"},{"description","Revistas de prueba"},{"kind","pdf"},{"count",1}};
+        const QJsonObject dos{{"id","BBD"},{"title","Big Blue Disk"},{"description","Menú DOS"},{"kind","dos"},{"count",1},{"launchId","BBD"}};
+        write(base+"/revistas.json",QJsonDocument(QJsonObject{{"format",1},{"series",QJsonArray{collection,dos}},{"entries",QJsonArray{QJsonObject{{"id","uno"},{"series","CGW"},{"title","Número 1"},{"kind","pdf"},{"path","CGW/uno.pdf"}},QJsonObject{{"id","BBD"},{"series","BBD"},{"title","Big Blue Disk"},{"kind","dos"},{"path","BBD"},{"revision",QString(64,'a')}}}}}).toJson());
+        f.backend=std::make_unique<Backend>(f.temp.path());auto &b=*f.backend;
+        QSignalSpy ready(&b,&Backend::extraReady);b.openMagazine("uno");QCOMPARE(ready.size(),1);QCOMPARE(ready[0][0].toUrl(),QUrl::fromLocalFile(base+"/CGW/uno.pdf"));QVERIFY(ready[0][2].toBool());
+        QCOMPARE(b.saveEmulatorSettings(true,"",{{"engine","classic"},{"options",QVariantMap{{"classic",QVariantMap{{"cpu.cycles","9000"}}}}}},{{"classic","/usr/bin/true"}}),QString());
+        b.openMagazine("BBD");QTRY_VERIFY_WITH_TIMEOUT(!b.busy(),10000);QVERIFY(b.status().startsWith("Revista cerrada"));QVERIFY(f.row("recent").isEmpty());
+        QDir configs(f.temp.path()+"/config/sessions/revistas");const auto names=configs.entryList({"*.conf"},QDir::Files);QCOMPARE(names.size(),1);
+        QFile config(configs.filePath(names.first()));QVERIFY(config.open(QIODevice::ReadOnly));const auto text=config.readAll();QVERIFY(text.contains("cycles=9000"));QVERIFY(text.contains("/data/magazines/BBD-"));QVERIFY(!text.contains("/source/Revistas"));QVERIFY(text.contains("call run.bat"));
+        QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",&b);engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->resize(1050,720);
+        QVERIFY(QMetaObject::invokeMethod(window,"navigate",Q_ARG(QVariant,QVariant("magazines"))));QTest::qWait(150);
+        auto grid=window->findChild<QQuickItem*>("magazinesGrid"),search=window->findChild<QQuickItem*>("searchField");QVERIFY(grid&&search);QCOMPARE(grid->property("count").toInt(),2);
+        search->forceActiveFocus();for(char c:QByteArray("Computer")){QTest::keyClick(window,c);QVERIFY(search->hasActiveFocus());}QTRY_COMPARE(grid->property("count").toInt(),1);
+        auto page=window->findChild<QObject*>("magazinesView");QVERIFY(page);search->setProperty("text",QString());
+        QVERIFY(QMetaObject::invokeMethod(page,"selectCollection",Q_ARG(QVariant,collection.toVariantMap())));QTRY_COMPARE(grid->property("count").toInt(),1);
+        QVERIFY(QMetaObject::invokeMethod(page,"selectCollection",Q_ARG(QVariant,dos.toVariantMap())));QTRY_VERIFY(window->findChild<QQuickItem*>("openDosMagazine")->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(window,"navigate",Q_ARG(QVariant,QVariant("all"))));QVERIFY(!grid->isVisible());QCOMPARE(b.count(),40);
+    }
     void extrasUi(){
         Fixture f;f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");
         QDir().mkpath(f.temp.path()+"/source/Complementos");

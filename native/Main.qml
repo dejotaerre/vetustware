@@ -32,6 +32,7 @@ ApplicationWindow {
     }
     function art(id) { return id ? "image://art/" + id + "/" + artRevision : "" }
     function applyFilter() {
+        if(view === "magazines") return
         vetust.filter(search.text, genre.currentText, view === "home" ? "all" : view, onlyTested, collectionKey)
         catalogGrid.positionViewAtBeginning()
     }
@@ -39,6 +40,7 @@ ApplicationWindow {
         view=target; collectionKey=""; collectionTitle=""; search.clear(); genre.currentIndex=0; onlyTested=false
         debounce.stop(); applyFilter()
         if(target === "home") vetust.refreshHome()
+        if(target === "magazines") magazinesView.reset()
     }
     function openCollection(row) {
         navigate("all"); collectionKey=row.key; collectionTitle=row.title; applyFilter()
@@ -114,7 +116,7 @@ ApplicationWindow {
                     Text { text: "THE DOS COLLECTION"; color: window.muted; font.pixelSize: 8; font.letterSpacing: 3 }
                 }
             }
-            Repeater { model: [{label:"INICIO",value:"home"},{label:"CATÁLOGO",value:"all"},{label:"FAVORITOS",value:"favorites"},{label:"RECIENTES",value:"recent"}]
+            Repeater { model: [{label:"INICIO",value:"home"},{label:"CATÁLOGO",value:"all"},{label:"FAVORITOS",value:"favorites"},{label:"RECIENTES",value:"recent"},{label:"REVISTAS",value:"magazines"}]
                 delegate: Button {
                     required property var modelData
                     implicitHeight: 48; implicitWidth: contentItem.implicitWidth+10
@@ -128,7 +130,7 @@ ApplicationWindow {
                 id: search; objectName: "searchField"
                 Layout.preferredWidth: window.width < 1200 ? 155 : 235
                 implicitHeight: 40
-                placeholderText: "Buscar juegos…"; color: window.ink; placeholderTextColor: window.muted; font.pixelSize: 12
+                placeholderText: window.view === "magazines" ? "Buscar revistas…" : "Buscar juegos…"; color: window.ink; placeholderTextColor: window.muted; font.pixelSize: 12
                 leftPadding: 14; rightPadding: 14; selectByMouse: true
                 background: Rectangle { color: "#111c26"; radius: 6; border.color: search.activeFocus ? window.cyan : "#34404b" }
                 onTextEdited: {
@@ -211,7 +213,7 @@ ApplicationWindow {
             footer: Item { width: homeFeed.width; height: 60; LabelText { anchors.centerIn: parent; text: "Tu colección, a tu ritmo. Todo se recomienda en este equipo."; font.pixelSize: 11 } }
         }
         ColumnLayout {
-            visible: window.view !== "home"
+            visible: window.view !== "home" && window.view !== "magazines"
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 16
             RowLayout {
                 Layout.fillWidth: true; spacing: 12
@@ -249,8 +251,9 @@ ApplicationWindow {
                 }
             }
         }
+        MagazinesView { id: magazinesView; visible: window.view === "magazines"; Layout.fillWidth: true; Layout.fillHeight: true; query: search.text; onNavigationChanged: search.clear() }
         Rectangle { Layout.fillWidth: true; height: 1; color: "#25313c" }
-        RowLayout { Layout.fillWidth: true; LabelText { text: "Selecciona una carátula para abrir su ficha     /  Buscar     F11  Pantalla completa"; font.pixelSize: 9 } Item { Layout.fillWidth: true } LabelText { text: "●  COLECCIÓN LOCAL"; color: "#8ba7b4"; font.pixelSize: 9; font.letterSpacing: 1.2 } }
+        RowLayout { Layout.fillWidth: true; LabelText { text: window.view === "magazines" ? "Selecciona una colección o revista     /  Buscar     F11  Pantalla completa" : "Selecciona una carátula para abrir su ficha     /  Buscar     F11  Pantalla completa"; font.pixelSize: 9 } Item { Layout.fillWidth: true } LabelText { text: "●  COLECCIÓN LOCAL"; color: "#8ba7b4"; font.pixelSize: 9; font.letterSpacing: 1.2 } }
     }
     Dialog {
         id: details; objectName: "gameDetails"
@@ -354,11 +357,28 @@ ApplicationWindow {
         ScrollView { anchors.fill: parent; clip: true; TextArea { width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WordWrap; text: (game.year || "")+" · "+(game.developer || "")+"\n\n"+(game.description || "Sin descripción en el catálogo."); color: "#bccbd5"; font.pixelSize: 14; background: Item {} } }
     }
     Dialog { id: imageDialog; anchors.centerIn: parent; width: window.width-100; height: window.height-90; modal: true; standardButtons: Dialog.Close; palette.window: "#080f17"; palette.button: "#1b2d3b"; palette.buttonText: window.ink; Art { anchors.fill: parent; source: window.art(shot); sourceSize.width: 1600 } }
-    PdfDocument { id: pdfDocument; objectName: "pdfDocument"; onPageCountChanged: if(pageCount > 0) Qt.callLater(documentView.fitPage) }
+    PdfDocument { id: pdfDocument; objectName: "pdfDocument"; onStatusChanged: if(status === PdfDocument.Ready) Qt.callLater(function(){documentView.showPage(0)}) }
     Dialog {
-        id: manualDialog; objectName: "documentDialog"; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; title: "Manual · " + (game.title || ""); standardButtons: Dialog.Close
+        id: manualDialog; objectName: "documentDialog"; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; focus: true; title: "Manual · " + (game.title || "")
+        standardButtons: Dialog.NoButton
+        footer: null
         palette.window: "#111e29"; palette.windowText: window.ink; palette.button: "#1b2d3b"; palette.buttonText: window.ink
+        header: Item {
+            implicitHeight: 56
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 12
+                Label { Layout.fillWidth: true; text: manualDialog.title; color: window.ink; font.pixelSize: 14; font.bold: true; elide: Text.ElideRight }
+                ToolButton {
+                    objectName: "closePdfButton"; text: "×"; font.pixelSize: 26
+                    implicitWidth: 36; implicitHeight: 32
+                    Accessible.name: "Cerrar visor PDF"
+                    ToolTip.text: "Cerrar (Esc)"; ToolTip.visible: hovered
+                    onClicked: manualDialog.close()
+                }
+            }
+        }
         onOpened: Qt.callLater(documentView.fitPage)
+        onClosed: pdfDocument.source=""
         contentItem: ColumnLayout {
             spacing: 8
             RowLayout {
@@ -372,11 +392,14 @@ ApplicationWindow {
             }
             PdfScrollablePageView {
                 id: documentView; objectName: "documentView"; Layout.fillWidth: true; Layout.fillHeight: true; clip: true; document: pdfDocument
+                leftMargin: Math.max(0,(width-contentWidth)/2)
+                rightMargin: leftMargin
+                onLeftMarginChanged: if(contentWidth <= width) contentX=-leftMargin
                 function showPage(page) {
                     if(page < 0 || page >= pdfDocument.pageCount || width <= 0 || height <= 0) return
                     const size = pdfDocument.pagePointSize(page)
                     goToLocation(page, Qt.point(0, 0), Math.min(width / size.width, height / size.height))
-                    contentX = 0; contentY = 0
+                    contentX = -leftMargin; contentY = 0
                 }
                 function fitPage() { showPage(Math.max(0, currentPage)) }
             }

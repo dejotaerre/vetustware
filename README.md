@@ -12,7 +12,7 @@ artwork, manuals and portable libraries. The current interface is in Spanish.*
 
 ![Inicio de VETUSTware](docs/images/inicio.png)
 
-[Descargar 0.3.1](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.1)
+[Descargar 0.3.2](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.2)
 · [Instalación](INSTALACION.md)
 · [Bibliotecas](docs/BIBLIOTECAS.md)
 · [Reportar un problema](https://github.com/dejotaerre/vetustware/issues)
@@ -23,6 +23,8 @@ artwork, manuals and portable libraries. The current interface is in Spanish.*
 - Consultar carátulas, capturas y manuales desde la ficha de cada juego.
 - Elegir DOSBox Staging, DOSBox clásico o DOSBox-X, con ajustes globales y por juego.
 - Cambiar pantalla completa y elegir monitor cuando hay más de uno disponible.
+- Elegir imagen Nítida (predeterminada) o Monitor clásico (CRT) en DOSBox Staging,
+  globalmente o por juego, conservando las proporciones.
 - Acceder a opciones avanzadas de CPU, memoria, vídeo, sonido y ejecutable del emulador.
 - Abrir una consola DOS con las unidades y las imágenes del juego montadas.
 - Usar XTree Gold o Norton Commander cuando la biblioteca aporte esas herramientas.
@@ -33,6 +35,10 @@ complementarios que aporte la biblioteca. Los PDF se muestran dentro de la
 aplicación; otros formatos usan el visor del sistema. Consulta
 [el formato de complementos](docs/BIBLIOTECAS.md#complementos-opcionales-desde-031).
 
+Desde 0.3.2, **Revistas** permite explorar colecciones con portadas, lectura
+PDF integrada y revistas electrónicas mediante DOSBox. El material se aporta
+en `Revistas/` dentro de la biblioteca; no se incluye en el motor. Consulta [su formato](docs/BIBLIOTECAS.md#revistas-opcionales).
+
 ![Ficha de un juego](docs/images/ficha.png)
 
 Las capturas ilustran una biblioteca aportada localmente. Los juegos, imágenes
@@ -40,7 +46,7 @@ y manuales que aparecen no se incluyen en el programa ni en sus descargas.
 
 ## Empezar
 
-La versión **0.3.1 es una versión de prueba para Linux x86_64**.
+La versión **0.3.2 es una versión de prueba para Linux x86_64**.
 El ejecutable publicado se compiló y probó en **CachyOS con Qt 6.12**. No es un
 paquete universal: necesita bibliotecas compatibles del sistema. El código
 fuente permite compilar en otras distribuciones; su compatibilidad todavía
@@ -48,7 +54,7 @@ requiere pruebas.
 
 1. Instala las dependencias indicadas en [INSTALACION.md](INSTALACION.md) y un
    emulador DOSBox. Los perfiles se han trabajado principalmente con DOSBox Staging.
-2. Descarga y extrae `vetustware-0.3.1-linux-x86_64.tar.gz` desde
+2. Descarga y extrae `vetustware-0.3.2-linux-x86_64.tar.gz` desde
    [Releases](https://github.com/dejotaerre/vetustware/releases).
 3. Dentro de la carpeta extraída, ejecuta:
 

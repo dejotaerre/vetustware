@@ -8,7 +8,7 @@ Dialog {
     objectName: "emulatorDialog"
     anchors.centerIn: parent
     width: Math.min(880,parent.width-50)
-    height: Math.min(advancedExpanded ? 780 : 450,parent.height-50)
+    height: Math.min(advancedExpanded ? 780 : 520,parent.height-50)
     modal: true
     closePolicy: Popup.CloseOnEscape
     palette.window: "#111e29"; palette.windowText: "#e7edf1"
@@ -55,7 +55,7 @@ Dialog {
         editEngine=chosen || snapshot.globalEngine
         inherited=vetust.inheritedSettings(globalScope,editEngine)
         if(globalScope && !(draft.options[editEngine] || {})["sdl.fullscreen"])setValue("sdl.fullscreen","true")
-        fields.model=vetust.emulatorFields(editEngine).filter(f=>f.key!=="sdl.fullscreen")
+        fields.model=vetust.emulatorFields(editEngine).filter(f=>f.key!=="sdl.fullscreen" && f.key!=="render.shader" && !(editEngine==="staging" && f.key==="render.aspect"))
         pathField.text=paths[editEngine] || ""
         refreshMonitorChoices()
         revision++
@@ -113,6 +113,29 @@ Dialog {
                 onToggled:dialog.setValue("sdl.fullscreen",checked ? "true" : "false")
             }
             Item { Layout.fillWidth:true }
+        }
+        ColumnLayout {
+            visible:dialog.editEngine==="staging"
+            Layout.fillWidth:true; spacing:4
+            RowLayout {
+                Layout.fillWidth:true
+                Label { text:"Estilo de imagen"; Layout.preferredWidth:185 }
+                ComboBox {
+                    objectName:"imageStylePicker"; Layout.fillWidth:true
+                    property string globalLabel:dialog.inherited["render.shader"]==="crt-auto" ? "Monitor clásico (CRT)" : "Nítido"
+                    model:dialog.globalScope ? ["Monitor clásico (CRT)","Nítido"] : ["Usar ajuste global · "+globalLabel,"Monitor clásico (CRT)","Nítido"]
+                    currentIndex:dialog.globalScope ? (dialog.value("render.shader")==="crt-auto" ? 0 : 1) : (dialog.value("render.shader")==="" ? 0 : dialog.value("render.shader")==="sharp" ? 2 : 1)
+                    Accessible.name:"Estilo de imagen"
+                    onActivated:{
+                        dialog.setValue("render.shader",!dialog.globalScope && currentIndex===0 ? "" : currentIndex===(dialog.globalScope ? 1 : 2) ? "sharp" : "crt-auto")
+                        dialog.revision++
+                    }
+                }
+            }
+            Label {
+                Layout.leftMargin:195; Layout.fillWidth:true; wrapMode:Text.WordWrap; font.pixelSize:11; color:"#91a3b3"
+                text:"Ambos conservan las proporciones. Nítido aprovecha más pantalla; CRT recrea las líneas de un monitor clásico."
+            }
         }
         ToolButton {
             objectName:"advancedToggle"

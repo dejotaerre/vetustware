@@ -12,6 +12,7 @@
 #include "emulation.h"
 #include "storage.h"
 #include "extras.h"
+#include "magazines.h"
 
 struct LaunchPlan { QString directory, config, error; };
 class ArtProvider : public QQuickImageProvider {
@@ -31,6 +32,8 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantMap homeSpotlight READ homeSpotlight NOTIFY homeChanged)
     Q_PROPERTY(QVariantMap selected READ selected NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList gameExtras READ gameExtras NOTIFY selectionChanged)
+    Q_PROPERTY(QVariantList magazineSeries READ magazineSeries NOTIFY storageChanged)
+    Q_PROPERTY(QString magazineError READ magazineError NOTIFY storageChanged)
     Q_PROPERTY(int count READ count NOTIFY changed)
     Q_PROPERTY(int page READ page NOTIFY changed)
     Q_PROPERTY(int pages READ pages NOTIFY changed)
@@ -73,6 +76,10 @@ public:
     Q_INVOKABLE void openManual();
     QVariantList gameExtras() const{return extras.list(selectedId);}
     Q_INVOKABLE void openExtra(int index);
+    QVariantList magazineSeries() const{return magazines.series();}
+    QString magazineError() const{return magazines.error();}
+    Q_INVOKABLE QVariantList magazineIssues(const QString &series) const{return magazines.issues(series);}
+    Q_INVOKABLE void openMagazine(const QString &id);
     Q_INVOKABLE void openLog();
     Q_INVOKABLE void dismissStatus();
     Q_INVOKABLE QVariantMap emulatorSettings(bool global) const;
@@ -89,6 +96,7 @@ signals:
 private:
     QVariantList monitorData;
     Extras extras;
+    Magazines magazines;
     QVariantList homeRowData;QVariantMap spotlightData;
     QHash<QString,QList<int>> collections;QString collectionKey,homeDay;
     void rebuildHome();

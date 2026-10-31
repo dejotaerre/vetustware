@@ -56,6 +56,9 @@ Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),l
     connect(&process,&QProcess::errorOccurred,this,[this](QProcess::ProcessError){active=false;notify("No se pudo iniciar DOSBox: "+process.errorString());});
     connect(&process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),this,[this](int code,QProcess::ExitStatus exitStatus){
         active=false;
+        if(process.property("magazine").toBool()){
+            notify(code==0&&exitStatus==QProcess::NormalExit?"Revista cerrada · Biblioteca original conservada":"La revista DOS terminó con un error. Puedes consultar el registro.");return;
+        }
         const QString id=process.property("gameId").toString();
         if(code==0&&exitStatus==QProcess::NormalExit){
             if(process.property("console").toBool()){notify("Consola cerrada · Los cambios en los archivos del juego se conservan");return;}
@@ -68,6 +71,7 @@ Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),l
 }
 void Backend::loadCatalog(){
     extras.load(library);
+    magazines.load(library);
     games.clear();indexes.clear();searches.clear();genreList.clear();spanishProfiles={};
     auto catalog=QFileInfo::exists(root+"/data/catalog.json")?readJson(root+"/data/catalog.json"):QJsonObject{};assetMap=catalog["assets"].toObject();profiles=QFileInfo::exists(root+"/data/original-profiles.json")?readJson(root+"/data/original-profiles.json"):QJsonObject{};
     if(QFileInfo::exists(root+"/data/spanish-profiles.json"))spanishProfiles=readJson(root+"/data/spanish-profiles.json");
@@ -299,7 +303,7 @@ void Backend::launch(bool console,const QString &fileManager){
     connect(watcher,&QFutureWatcher<LaunchPlan>::finished,this,[this,watcher,game,engine,executable,catalogId,console]{
         const auto plan=watcher->result();watcher->deleteLater();
         if(!plan.error.isEmpty()){active=false;notify(plan.error);return;}
-        const QString id=game["id"].toString()+(console?"-console":"");QDir().mkpath(root+"/logs");process.setProperty("console",console);process.setProperty("gameId",catalogId);process.setProperty("logId",id);
+        const QString id=game["id"].toString()+(console?"-console":"");QDir().mkpath(root+"/logs");process.setProperty("magazine",false);process.setProperty("console",console);process.setProperty("gameId",catalogId);process.setProperty("logId",id);
         process.setWorkingDirectory(plan.directory);auto env=QProcessEnvironment::systemEnvironment();env.insert("XDG_CONFIG_HOME",root+"/config/emulators");env.insert("XDG_DATA_HOME",root+"/data/emulators");
         refreshMonitors();
         const QString preferred=emulation.data["global"].toObject()["monitor"].toString();
@@ -397,6 +401,7 @@ QVariantMap Backend::inheritedSettings(bool global,const QString &engine) const{
     for(auto field:EmulationSettings::fields(engine)){
         QString key=field.toMap()["key"].toString();
         result[key]=global?QString("Perfil de cada juego"):defaults.contains(key)?defaults[key].toString()+" · Global":values.contains(key)?values[key].toString()+" · Perfil":QString("Predeterminado del motor");
+        if(key=="render.shader")result[key]=!global&&defaults.contains(key)?defaults[key].toString():QString("sharp");
     }
     return result;
 }

@@ -93,3 +93,35 @@ Se extrae solamente el documento elegido. Un HTML con referencias relativas a
 otros archivos puede necesitar sus recursos adicionales; el visor no reconstruye
 un sitio web completo. Conservar un archivo no garantiza que el equipo receptor
 tenga un visor instalado para su formato.
+
+
+## Revistas opcionales
+
+Desde 0.3.2 se admite `Revistas/revistas.json` (formato 1).
+Las versiones anteriores siguen usando los juegos, pero no muestran Revistas.
+
+El catálogo contiene dos listas:
+
+- `series`: `id`, `title`, `description`, `kind` (`pdf` o `dos`), `count`,
+  `cover` opcional, `indexId` para el índice PDF o `launchId` para la revista DOS.
+- `entries`: `id`, `series`, `title`, `kind` y `path`. Los PDF pueden incluir
+  `cover`, `bytes` e `isIndex`; los índices no duplican números en la cuadrícula.
+  Las entradas DOS incluyen `revision`, un SHA256 del inventario de su contenido.
+
+`path` y `cover` son relativos a `Revistas/`. No se admiten rutas externas a esa
+carpeta. Las portadas son imágenes locales: no hay descarga ni servicio externo.
+Los PDF se leen directamente. Los índices originales pueden contener enlaces
+externos o referencias históricas; la navegación por números usa el catálogo.
+
+Los perfiles DOS admitidos son `BBD` y `GameBytes`, ambos con `run.bat` en su raíz.
+Al abrirlos, el motor prepara una copia completa en
+`data/magazines/<carpeta>-<revision>` dentro de su instalación. Solo DOSBox ejecuta
+el menú de esa copia; los lanzadores `.sh` de la biblioteca no se ejecutan.
+La preparación es atómica y una copia incompleta existente no se sobrescribe.
+Se usan los ajustes globales de emulación, monitor y estilo de imagen. Estas
+sesiones no se añaden al historial de juegos.
+
+Se puede compartir y mover `Revistas/` junto al resto de la biblioteca. Los
+archivos `conservacion.json` y `SHA256SUMS`, si se aportan, documentan la integridad
+del material original y de los archivos añadidos. Las copias de trabajo locales
+pueden contener cambios del lector y no forman parte de la biblioteca compartida.

@@ -52,6 +52,7 @@ QVariantList EmulationSettings::fields(const QString &e){
     add("sblaster.sbtype","Sound Blaster",{"sb1","sb2","sbpro1","sbpro2","sb16","none"});
     add("midi.mididevice","Dispositivo MIDI",e=="classic"?QStringList{"default","none","alsa"}:QStringList{"default","none","mt32","fluidsynth"});
     add("sdl.fullscreen","Pantalla completa",{"true","false"});
+    if(e=="staging")add("render.shader","Estilo de imagen",{"crt-auto","sharp"});
     add("render.aspect","Corregir proporción",{"true","false"});
     return list;
 }
@@ -131,6 +132,23 @@ QString EmulationSettings::apply(QString config,const QJsonObject &values){
 
 QString EmulationSettings::configured(QString config,const QJsonObject &values,const QString &engine){
     auto options=values;
+    if(engine=="staging"){
+        const QString shader=options.value("render.shader").toString("sharp");
+        // Ambos estilos conservan las proporciones; CRT necesita líneas regulares.
+        options["render.shader"]=shader;
+        options["render.aspect"]="auto";
+        options["render.viewport"]="fit";
+        options["render.integer_scaling"]=shader=="sharp"?"off":"auto";
+        QStringList filtered;QString section;
+        for(const auto &line:config.split('\n')){
+            const QString text=line.trimmed().toLower();
+            if(text.startsWith('['))section=text;
+            // El nombre antiguo no debe prevalecer sobre el estilo elegido.
+            if(section=="[render]"&&text.section('=',0,0).trimmed()=="glshader")continue;
+            filtered<<line;
+        }
+        config=filtered.join('\n');
+    }
     if(engine=="staging"&&options.contains("cpu.cycles")){
         // Staging 0.82+ utiliza ciclos separados para modo real y protegido.
         const QString cycles=options.take("cpu.cycles").toString();
