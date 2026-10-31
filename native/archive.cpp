@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStorageInfo>
+#include <QSaveFile>
+#include <QCryptographicHash>
 #include <stdexcept>
 
 static void fail(const QString &message) { throw std::runtime_error(message.toStdString()); }
@@ -15,6 +17,27 @@ QStringList Archive::names() const {
     QStringList result;
     for(zip_int64_t i=0;i<zip_get_num_entries(handle,0);i++)result<<QString::fromUtf8(zip_get_name(handle,i,0));
     return result;
+}
+void Archive::extractFile(const QString &name,const QString &destination,qint64 size,const QByteArray &sha256){
+    const auto parts=name.split('/');
+    if(name.isEmpty()||name.startsWith('/')||name.contains('\\')||parts.contains("..")||parts.first().contains(':'))fail("Ruta de extra no válida.");
+    zip_stat_t st;zip_stat_init(&st);
+    if(zip_stat(handle,name.toUtf8().constData(),0,&st)!=0||st.size!=quint64(size))fail("El extra no coincide con el índice de la biblioteca.");
+    zip_uint8_t os=0;zip_uint32_t attributes=0;zip_file_get_external_attributes(handle,st.index,0,&os,&attributes);
+    if(os==ZIP_OPSYS_UNIX&&((attributes>>16)&0170000)==0120000)fail("El extra contiene un enlace no permitido.");
+    if(!QDir().mkpath(QFileInfo(destination).absolutePath()))fail("No se pudo crear la carpeta de extras.");
+    if(QStorageInfo(QFileInfo(destination).absolutePath()).bytesAvailable()<size+64*1024*1024)fail("No hay espacio suficiente para abrir este extra.");
+    QSaveFile out(destination);if(!out.open(QIODevice::WriteOnly))fail("No se pudo guardar el extra.");
+    zip_file_t *input=zip_fopen_index(handle,st.index,0);if(!input)fail("No se pudo leer el extra.");
+    QByteArray buffer(1024*1024,Qt::Uninitialized);QCryptographicHash hash(QCryptographicHash::Sha256);qint64 total=0,n=0;
+    while((n=zip_fread(input,buffer.data(),buffer.size()))>0){
+        total+=n;
+        if(total>size||out.write(buffer.constData(),n)!=n){zip_fclose(input);fail("No se pudo completar el extra.");}
+        hash.addData(QByteArrayView(buffer.constData(),n));
+    }
+    const int closed=zip_fclose(input);
+    if(n<0||closed!=0||total!=size||hash.result().toHex()!=sha256)fail("El extra no superó la comprobación de integridad.");
+    if(!out.commit())fail("No se pudo guardar el extra completo.");
 }
 QByteArray Archive::read(const QString &name){
     zip_stat_t st;zip_stat_init(&st);

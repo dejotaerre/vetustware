@@ -11,6 +11,7 @@
 #include "archive.h"
 #include "emulation.h"
 #include "storage.h"
+#include "extras.h"
 
 struct LaunchPlan { QString directory, config, error; };
 class ArtProvider : public QQuickImageProvider {
@@ -29,6 +30,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantList homeRows READ homeRows NOTIFY homeChanged)
     Q_PROPERTY(QVariantMap homeSpotlight READ homeSpotlight NOTIFY homeChanged)
     Q_PROPERTY(QVariantMap selected READ selected NOTIFY selectionChanged)
+    Q_PROPERTY(QVariantList gameExtras READ gameExtras NOTIFY selectionChanged)
     Q_PROPERTY(int count READ count NOTIFY changed)
     Q_PROPERTY(int page READ page NOTIFY changed)
     Q_PROPERTY(int pages READ pages NOTIFY changed)
@@ -69,6 +71,8 @@ public:
     bool nortonAvailable() const;
     Q_INVOKABLE void setSpanish(bool enabled);
     Q_INVOKABLE void openManual();
+    QVariantList gameExtras() const{return extras.list(selectedId);}
+    Q_INVOKABLE void openExtra(int index);
     Q_INVOKABLE void openLog();
     Q_INVOKABLE void dismissStatus();
     Q_INVOKABLE QVariantMap emulatorSettings(bool global) const;
@@ -81,8 +85,10 @@ signals:
     void storageChanged();
     void monitorsChanged();
     void changed();void homeChanged();void selectionChanged();void statusChanged();void manualReady(QUrl url);
+    void extraReady(QUrl url,QString name,bool pdf);
 private:
     QVariantList monitorData;
+    Extras extras;
     QVariantList homeRowData;QVariantMap spotlightData;
     QHash<QString,QList<int>> collections;QString collectionKey,homeDay;
     void rebuildHome();

@@ -64,3 +64,32 @@ ruta en los ajustes no mueve físicamente los archivos.
 La instantánea personalizada de una biblioteca tampoco se actualiza al cambiar
 los juegos instalados; las nuevas personalizaciones deben exportarse de nuevo.
 Esta versión del repositorio no ofrece un exportador general de bibliotecas.
+
+## Complementos opcionales (desde 0.3.1)
+
+```text
+Complementos/
+├── metadata-original.zip
+├── variantes-locales.zip
+├── conservacion.json
+├── extras.json
+├── SHA256SUMS
+└── LEEME.txt
+```
+
+Los dos ZIP conservan documentación original y variantes técnicas históricas.
+No sustituyen los perfiles de `Personalizaciones/perfiles.zip`. El inventario
+`conservacion.json` documenta la cobertura de los archivos originales mediante
+rutas relativas y SHA-256; el motor no necesita leerlo durante el uso normal.
+
+`extras.json` tiene `format: 1` y un objeto `games`, cuyas claves son los ID del
+catálogo. Cada valor es una lista de documentos con `name`, `kind`, `bytes`,
+`sha256`, `archive` (ruta relativa a la biblioteca) y `entry` (miembro del ZIP).
+Un documento puede referirse a un ZIP existente para evitar duplicar contenido.
+El motor permite documentos y medios, rechaza scripts/ejecutables y rutas que
+salgan de la biblioteca, y verifica el archivo antes de abrirlo.
+
+Se extrae solamente el documento elegido. Un HTML con referencias relativas a
+otros archivos puede necesitar sus recursos adicionales; el visor no reconstruye
+un sitio web completo. Conservar un archivo no garantiza que el equipo receptor
+tenga un visor instalado para su formato.

@@ -12,11 +12,11 @@ import tarfile
 import tempfile
 import time
 
-VERSION = '0.3.0'
-NATIVE = '''CMakeLists.txt Main.qml EmulatorDialog.qml StorageDialog.qml
+VERSION = '0.3.1'
+NATIVE = '''CMakeLists.txt Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml
 archive.cpp archive.h archive_tests.cpp backend.cpp backend.h displays.cpp displays.h
 emulation.cpp emulation.h emulation_tests.cpp home.cpp home_tests.cpp main.cpp
-storage.cpp storage.h icon.svg'''.split()
+storage.cpp storage.h extras.cpp extras.h extras_tests.cpp icon.svg'''.split()
 HELPERS = ['install.py', 'catalog_index.py', 'import_library.py', 'package_release.py']
 DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md']
 

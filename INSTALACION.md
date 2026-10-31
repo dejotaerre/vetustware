@@ -1,4 +1,4 @@
-# VETUSTware — instalación de la versión de prueba 0.3.0
+# VETUSTware — instalación de la versión de prueba 0.3.1
 
 Interfaz nativa para una colección local de juegos DOS con estructura eXoDOS.
 Licencia MIT: ver LICENSE. No requiere navegador ni servicios en línea.
@@ -142,3 +142,20 @@ ajenos se rige por sus propias licencias; ver THIRD_PARTY.md.
 El diagnóstico muestra rutas del usuario. Revisarlo antes de publicarlo.
 Esta versión se ha probado en el sistema indicado en BUILD_INFO.json; las pruebas
 en otras distribuciones siguen siendo necesarias antes de anunciar compatibilidad.
+
+## Extras de la biblioteca
+
+Desde 0.3.1, las fichas con material complementario muestran **Extras**. Puedes
+buscar por nombre y abrir mapas, guías, imágenes, música y vídeos. Los PDF se
+abren en VETUSTware; los demás formatos utilizan el visor predeterminado del
+sistema. El material puede corresponder a la edición original y estar en otro
+idioma. Los scripts y ejecutables históricos no aparecen como documentos.
+
+El archivo seleccionado se extrae y verifica mediante SHA-256 en
+`cache/extras` dentro de la instalación. Esa caché puede borrarse con la aplicación
+cerrada: los documentos se recuperan de la biblioteca al volver a abrirlos.
+No se modifican los juegos, sus perfiles ni las partidas.
+
+Una biblioteca sin complementos sigue funcionando. La versión 0.3.0 puede usar
+los juegos de una biblioteca ampliada, pero requiere actualizarse a 0.3.1 para
+mostrar el botón Extras.

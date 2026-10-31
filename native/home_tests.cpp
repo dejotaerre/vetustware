@@ -206,6 +206,27 @@ ApplicationWindow {
         window->setProperty("screens",QVariantList{a,b});QCOMPARE(picker->property("currentIndex").toInt(),2);
         QVERIFY(begin(false));QVERIFY(!section->isVisible());
     }
+    void extrasUi(){
+        Fixture f;f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");
+        QDir().mkpath(f.temp.path()+"/source/Complementos");
+        QFile index(f.temp.path()+"/source/Complementos/extras.json");QVERIFY(index.open(QIODevice::WriteOnly));
+        const QJsonArray entries{QJsonObject{{"name","Mapa.pdf"},{"kind","Documento"},{"bytes",100}},QJsonObject{{"name","Foto.png"},{"kind","Imagen"},{"bytes",200}}};
+        index.write(QJsonDocument(QJsonObject{{"format",1},{"games",QJsonObject{{Seed,entries}}}}).toJson());index.close();
+        f.backend=std::make_unique<Backend>(f.temp.path());
+        QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->resize(1050,720);window->requestActivate();QTest::qWait(150);
+        QVERIFY(QMetaObject::invokeMethod(window,"openGame",Q_ARG(QVariant,QVariant(Seed))));
+        auto button=window->findChild<QQuickItem*>("extrasButton");QVERIFY(button);QTRY_VERIFY(button->isVisible());QTest::qWait(100);
+        const auto point=button->mapToScene({button->width()/2,button->height()/2});QVERIFY(point.x()>0&&point.x()<window->width());QVERIFY(point.y()>0&&point.y()<window->height());
+        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,point.toPoint());
+        auto dialog=window->findChild<QObject*>("extrasDialog");QVERIFY(dialog);QTRY_VERIFY(dialog->property("opened").toBool());
+        auto list=window->findChild<QQuickItem*>("extrasList"),search=window->findChild<QQuickItem*>("extrasSearch");QVERIFY(list&&search);QTRY_COMPARE(list->property("count").toInt(),2);
+        search->forceActiveFocus();for(char c:QByteArray("Foto")){QTest::keyClick(window,c);QVERIFY(search->hasActiveFocus());}
+        QTRY_COMPARE(list->property("count").toInt(),1);QVERIFY(!f.backend->selected()["favorite"].toBool());
+        QTest::keyClick(window,Qt::Key_Escape);QTRY_VERIFY(!dialog->property("visible").toBool());
+        f.backend->selectGame("1");QTRY_VERIFY(!button->isVisible());
+    }
     void uiSearchAndDetails(){
         Fixture f;QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
         engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());

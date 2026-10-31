@@ -21,7 +21,7 @@ ApplicationWindow {
     property string collectionTitle: ""
     property var spotlight: vetust.homeSpotlight
     property int artRevision: 0
-    property bool modalOpen: storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || busyDialog.visible
+    property bool modalOpen: storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible
     property bool onlyTested: false
     property int shotIndex: 0
     property var shots: game.shots || []
@@ -46,7 +46,16 @@ ApplicationWindow {
     function openGame(id) { vetust.selectGame(id); details.open() }
     function fullscreen() { visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen }
     onClosing: function(close) { if (vetust.busy) { close.accepted=false; busyDialog.open() } }
-    Connections { target: vetust; function onStorageChanged() { window.artRevision++ } function onSelectionChanged() { window.shotIndex=0 } function onManualReady(url) { pdfDocument.source=url; manualDialog.open() } }
+    Connections {
+        target: vetust
+        function onStorageChanged() { window.artRevision++ }
+        function onSelectionChanged() { window.shotIndex=0 }
+        function onManualReady(url) { manualDialog.title="Manual · " + (game.title || ""); pdfDocument.source=url; manualDialog.open() }
+        function onExtraReady(url, name, pdf) {
+            if(pdf) { manualDialog.title=name; pdfDocument.source=url; manualDialog.open() }
+            else Qt.openUrlExternally(url)
+        }
+    }
     Image { anchors.fill: parent; source: window.art(view === "home" ? (spotlight.background || spotlight.cover) : (game.background || shot)); fillMode: Image.PreserveAspectCrop; opacity: 0.07; asynchronous: true; sourceSize.width: 1400 }
     Rectangle { anchors.fill: parent; gradient: Gradient { GradientStop { position: 0; color: "#50081018" } GradientStop { position: 1; color: "#f0080f17" } } }
 
@@ -274,10 +283,11 @@ ApplicationWindow {
                 }
                 Text { Layout.fillWidth: true; text: game.summary || "Sin descripción en el catálogo."; color: "#a8b6c2"; font.pixelSize: 12; lineHeight: 1.35; wrapMode: Text.WordWrap; maximumLineCount: window.height<800 ? 2 : 3; elide: Text.ElideRight }
                 Button { text: "Leer ficha completa ↗"; padding: 0; implicitHeight: 22; contentItem: Text { text: parent.text; color: "#c6b08d"; font.pixelSize: 11 } background: Item {} onClicked: infoDialog.open() }
-                RowLayout { spacing: 10; Layout.topMargin: 2
+                Flow { spacing: 10; Layout.topMargin: 2; Layout.fillWidth: true
                     Action { text: vetust.busy ? "EN SESIÓN" : "▶   JUGAR"; primary: true; enabled: !!game.playable && !vetust.busy; implicitHeight: 48; implicitWidth: 140; onClicked: vetust.play() }
                     Action { text: game.favorite ? "♥" : "♡"; highlightedText: !!game.favorite; implicitHeight: 48; implicitWidth: 48; onClicked: vetust.toggleFavorite(); ToolTip.text: "Favorito · F"; ToolTip.visible: hovered }
                     Action { text: "▤  Manual"; visible: !!game.manual; implicitHeight: 48; onClicked: vetust.openManual() }
+                    Action { objectName: "extrasButton"; text: "Extras"; visible: vetust.gameExtras.length > 0; implicitHeight: 48; onClicked: extrasDialog.begin() }
                 }
                 RowLayout {
                     visible: !!game.hasSpanish
@@ -344,18 +354,41 @@ ApplicationWindow {
         ScrollView { anchors.fill: parent; clip: true; TextArea { width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WordWrap; text: (game.year || "")+" · "+(game.developer || "")+"\n\n"+(game.description || "Sin descripción en el catálogo."); color: "#bccbd5"; font.pixelSize: 14; background: Item {} } }
     }
     Dialog { id: imageDialog; anchors.centerIn: parent; width: window.width-100; height: window.height-90; modal: true; standardButtons: Dialog.Close; palette.window: "#080f17"; palette.button: "#1b2d3b"; palette.buttonText: window.ink; Art { anchors.fill: parent; source: window.art(shot); sourceSize.width: 1600 } }
-    PdfDocument { id: pdfDocument }
+    PdfDocument { id: pdfDocument; objectName: "pdfDocument"; onPageCountChanged: if(pageCount > 0) Qt.callLater(documentView.fitPage) }
     Dialog {
-        id: manualDialog; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; title: "Manual · " + (game.title || ""); standardButtons: Dialog.Close
+        id: manualDialog; objectName: "documentDialog"; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; title: "Manual · " + (game.title || ""); standardButtons: Dialog.Close
         palette.window: "#111e29"; palette.windowText: window.ink; palette.button: "#1b2d3b"; palette.buttonText: window.ink
-        PdfMultiPageView { anchors.fill: parent; clip: true; document: pdfDocument }
+        onOpened: Qt.callLater(documentView.fitPage)
+        contentItem: ColumnLayout {
+            spacing: 8
+            RowLayout {
+                Layout.fillWidth: true
+                Action { text: "← Anterior"; enabled: documentView.currentPage > 0; onClicked: documentView.showPage(documentView.currentPage - 1) }
+                Label { text: (pdfDocument.pageCount ? documentView.currentPage + 1 : 0) + " / " + pdfDocument.pageCount; color: window.ink }
+                Action { text: "Siguiente →"; enabled: documentView.currentPage + 1 < pdfDocument.pageCount; onClicked: documentView.showPage(documentView.currentPage + 1) }
+                Item { Layout.fillWidth: true }
+                Action { text: "Página completa"; onClicked: documentView.fitPage() }
+                Action { text: "Ajustar al ancho"; onClicked: documentView.scaleToWidth(documentView.width, documentView.height) }
+            }
+            PdfScrollablePageView {
+                id: documentView; objectName: "documentView"; Layout.fillWidth: true; Layout.fillHeight: true; clip: true; document: pdfDocument
+                function showPage(page) {
+                    if(page < 0 || page >= pdfDocument.pageCount || width <= 0 || height <= 0) return
+                    const size = pdfDocument.pagePointSize(page)
+                    goToLocation(page, Qt.point(0, 0), Math.min(width / size.width, height / size.height))
+                    contentX = 0; contentY = 0
+                }
+                function fitPage() { showPage(Math.max(0, currentPage)) }
+            }
+        }
     }
-    Dialog { id: busyDialog; anchors.centerIn: parent; modal: true; title: "Hay una sesión de DOSBox en curso"; standardButtons: Dialog.Ok; Label { text: "Cierra DOSBox con Ctrl+F9 antes de salir de VETUSTware.\nSi se está preparando, espera a que termine." } }
+    Dialog { id: busyDialog; anchors.centerIn: parent; modal: true; title: "Hay una tarea en curso"; standardButtons: Dialog.Ok; Label { text: "Espera a que termine la preparación del archivo o del juego.\nSi DOSBox está abierto, ciérralo con Ctrl+F9 antes de salir." } }
+    ExtrasDialog { id: extrasDialog }
     StorageDialog { id:storageDialog }
     Component.onCompleted: { if(vetust.storageSettings.needsSetup)storageDialog.begin() }
     EmulatorDialog { id: emulatorDialog; onStorageRequested:{emulatorDialog.close();storageDialog.begin()} }
     Timer { interval: 60000; running: true; repeat: true; onTriggered: vetust.refreshHome() }
     Shortcut { sequence: "F11"; onActivated: window.fullscreen() }
     Shortcut { sequence: "/"; enabled: !window.modalOpen && !search.activeFocus; onActivated: search.forceActiveFocus() }
-    Shortcut { sequence: "F"; enabled: details.opened && !emulatorDialog.visible && !infoDialog.visible && !manualDialog.visible && !imageDialog.visible; onActivated: vetust.toggleFavorite() }
+    Shortcut { sequence: "F"; enabled: details.opened && !emulatorDialog.visible && !infoDialog.visible && !manualDialog.visible && !imageDialog.visible && !extrasDialog.visible; onActivated: vetust.toggleFavorite() }
 }

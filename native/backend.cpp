@@ -67,6 +67,7 @@ Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),l
     selectedId="67bdc1a5-86ff-4cc8-a8e1-293a97de6e95";rebuildHome();refresh();
 }
 void Backend::loadCatalog(){
+    extras.load(library);
     games.clear();indexes.clear();searches.clear();genreList.clear();spanishProfiles={};
     auto catalog=QFileInfo::exists(root+"/data/catalog.json")?readJson(root+"/data/catalog.json"):QJsonObject{};assetMap=catalog["assets"].toObject();profiles=QFileInfo::exists(root+"/data/original-profiles.json")?readJson(root+"/data/original-profiles.json"):QJsonObject{};
     if(QFileInfo::exists(root+"/data/spanish-profiles.json"))spanishProfiles=readJson(root+"/data/spanish-profiles.json");
@@ -138,6 +139,22 @@ void Backend::toggleFavorite(){if(!indexes.contains(selectedId))return;bool yes=
 void Backend::notify(const QString &text,int value){message=text;percent=value;emit statusChanged();}
 void Backend::dismissStatus(){if(!active)notify("");}
 void Backend::openLog(){QString id=process.property("logId").toString();if(id.isEmpty())id=selectedId+(spanishProfiles.contains(selectedId)&&spanishPreference.value(selectedId,true)?"-es":"");const QString path=root+"/logs/"+id+"-native.log";if(QFileInfo::exists(path))QDesktopServices::openUrl(QUrl::fromLocalFile(path));else notify("Este juego aún no tiene un registro de ejecución nativa.");}
+void Backend::openExtra(int index){
+    if(active)return;
+    active=true;notify("Abriendo extra…");
+    const auto source=extras;const QString id=selectedId,cache=root+"/cache/extras";
+    auto watcher=new QFutureWatcher<QPair<QString,QString>>(this);
+    connect(watcher,&QFutureWatcher<QPair<QString,QString>>::finished,this,[this,watcher]{
+        const auto result=watcher->result();watcher->deleteLater();active=false;
+        if(!result.second.isEmpty()){notify(result.second);return;}
+        const QFileInfo file(result.first);notify("Extra preparado: "+file.fileName());
+        emit extraReady(QUrl::fromLocalFile(result.first),file.fileName(),file.suffix().compare("pdf",Qt::CaseInsensitive)==0);
+    });
+    watcher->setFuture(QtConcurrent::run([source,id,index,cache]()->QPair<QString,QString>{
+        try{return {source.prepare(id,index,cache),{}};}
+        catch(const std::exception &e){return {{},QString::fromUtf8(e.what())};}
+    }));
+}
 void Backend::openManual(){
     try{const QString name=games[indexes[selectedId]]["manual"].toString();if(name.isEmpty())return;QString path=root+"/data/manuals/"+selectedId+".pdf";QDir().mkpath(QFileInfo(path).absolutePath());if(!QFileInfo::exists(path)){Archive zip(library+"/Content/XODOSMetadata.zip");writeNew(path,zip.read(name));}emit manualReady(QUrl::fromLocalFile(path));}
     catch(const std::exception &e){notify(QString::fromUtf8(e.what()));}
