@@ -38,7 +38,7 @@ Desde 0.3.2, **Revistas** permite explorar colecciones con portadas, lectura
 PDF integrada y revistas electrónicas mediante DOSBox. El material se aporta
 en `Revistas/` dentro de la biblioteca; no se incluye en el motor. Consulta [su formato](docs/BIBLIOTECAS.md#revistas-opcionales).
 
-Capturas de la interfaz de **VETUSTware 0.3.2**.
+Capturas en español: las originales de **0.3.2** y la nueva vista de doble página de **0.3.4**.
 
 **Ficha del juego:** selección de edición, manual, extras y configuración individual.
 
@@ -47,6 +47,13 @@ Capturas de la interfaz de **VETUSTware 0.3.2**.
 **Revistas:** colecciones de publicaciones en PDF y revistas electrónicas para DOS.
 
 ![Colecciones de la sección Revistas](docs/images/revistas.png)
+
+**Visor PDF en doble página (0.3.4):** portada sola y después los pares 2–3,
+4–5, etc. Los cursores izquierdo/derecho cambian de par; Página completa y Ajustar
+al ancho actúan sobre ambas páginas. El ejemplo muestra Computer Gaming World,
+publicada en inglés, con los controles del visor en español.
+
+![VETUSTware 0.3.4 con las páginas PDF 4–5 de Computer Gaming World en Doble página y controles en español](docs/images/pdf-doble.png)
 
 <details>
 <summary>Ver los ajustes y el visor PDF</summary>
@@ -57,10 +64,8 @@ más de uno; esta captura corresponde a una sola pantalla.
 
 ![Ajustes globales de emulación](docs/images/ajustes.png)
 
-**Lectura integrada:** desde 0.3.4 puedes elegir Una página o Doble página.
-La portada aparece sola y después se muestran los pares 2–3, 4–5, etc.
-Los cursores izquierdo/derecho cambian de página o de par. Página completa
-y Ajustar al ancho actúan sobre la vista actual; X o Escape cierran el visor.
+**Lectura de una página:** la vista original sigue disponible. Esta captura anterior
+muestra el manual de Larry 7 en español. X o Escape cierran el visor.
 
 ![Manual en español de Larry 7 en el visor PDF](docs/images/visor-pdf.png)
 
@@ -155,8 +160,9 @@ Esta mejora está incluida en la descarga 0.3.3.
 
 Cualquier colaborador puede añadir otro idioma mediante un archivo JSON, sin
 recompilar la aplicación. Consulta la [guía de traducción en inglés](docs/TRANSLATING.md).
-Las capturas en español de este documento corresponden a la versión 0.3.2;
-el [README en inglés](README.md) muestra la interfaz de la versión 0.3.3.
+Se conservan las capturas originales en español de la versión 0.3.2 y se añade
+la vista de doble página de 0.3.4. El [README en inglés](README.md) también incluye
+la nueva captura con sus controles en inglés.
 
 ## Colaboradores
 

@@ -52,6 +52,12 @@ The example shows a Spanish game edition selected within the English interface.
 
 ![Magazine collections in the English interface](docs/images/en/magazines.png)
 
+**Two-page PDF reader (0.3.4):** the cover appears alone, followed by pages 2–3,
+4–5, and so on. Use Left/Right arrows to navigate, and Fit page or Fit width to
+size the whole spread. This example shows Computer Gaming World with English controls.
+
+![VETUSTware 0.3.4 showing PDF pages 4–5 of Computer Gaming World in Two pages mode, with English controls](docs/images/en/pdf-spread.png)
+
 <details>
 <summary>View settings and the PDF reader</summary>
 
@@ -61,10 +67,8 @@ appears only when more than one display is detected; none is shown in this captu
 
 ![Global settings with English selected as the interface language](docs/images/en/settings.png)
 
-**Integrated reading:** choose Single page or Two pages. The cover appears alone,
-followed by pages 2–3, 4–5, and so on. Left/Right arrows navigate pages or spreads;
-Fit page and Fit width apply to the current view. Close with X or Escape.
-This example opens Larry 7's English game design document from Extras.
+**Single-page reading:** the original view remains available. This earlier capture
+opens Larry 7's English game design document from Extras. Close with X or Escape.
 
 ![An English Larry 7 design document in the integrated PDF viewer](docs/images/en/pdf-viewer.png)
 
