@@ -367,7 +367,7 @@ ApplicationWindow {
         ScrollView { anchors.fill: parent; clip: true; TextArea { width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WordWrap; text: (game.year || "")+" · "+(game.developer || "")+"\n\n"+(game.description || qsTranslate("Vetust", "No description in the catalog.")); color: "#bccbd5"; font.pixelSize: 14; background: Item {} } }
     }
     Dialog { id: imageDialog; anchors.centerIn: parent; width: window.width-100; height: window.height-90; modal: true; standardButtons: Dialog.Close; palette.window: "#080f17"; palette.button: "#1b2d3b"; palette.buttonText: window.ink; Art { anchors.fill: parent; source: window.art(shot); sourceSize.width: 1600 } }
-    PdfDocument { id: pdfDocument; objectName: "pdfDocument"; onStatusChanged: if(status === PdfDocument.Ready) Qt.callLater(function(){documentView.showPage(0)}) }
+    PdfDocument { id: pdfDocument; objectName: "pdfDocument" }
     Dialog {
         id: manualDialog; objectName: "documentDialog"; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; focus: true; title: qsTranslate("Vetust", "Manual · ") + (game.title || "")
         standardButtons: Dialog.NoButton
@@ -387,31 +387,35 @@ ApplicationWindow {
                 }
             }
         }
-        onOpened: Qt.callLater(documentView.fitPage)
+        onOpened: Qt.callLater(function() { documentView.fitPage(); documentView.forceActiveFocus() })
         onClosed: pdfDocument.source=""
+        Shortcut { sequence: "Left"; enabled: manualDialog.opened && !pdfPageMode.popup.visible; onActivated: documentView.previousPage() }
+        Shortcut { sequence: "Right"; enabled: manualDialog.opened && !pdfPageMode.popup.visible; onActivated: documentView.nextPage() }
+
         contentItem: ColumnLayout {
             spacing: 8
             RowLayout {
                 Layout.fillWidth: true
-                Action { text: qsTranslate("Vetust", "← Previous"); enabled: documentView.currentPage > 0; onClicked: documentView.showPage(documentView.currentPage - 1) }
-                Label { text: (pdfDocument.pageCount ? documentView.currentPage + 1 : 0) + " / " + pdfDocument.pageCount; color: window.ink }
-                Action { text: qsTranslate("Vetust", "Next →"); enabled: documentView.currentPage + 1 < pdfDocument.pageCount; onClicked: documentView.showPage(documentView.currentPage + 1) }
-                Item { Layout.fillWidth: true }
-                Action { text: qsTranslate("Vetust", "Fit page"); onClicked: documentView.fitPage() }
-                Action { text: qsTranslate("Vetust", "Fit width"); onClicked: documentView.scaleToWidth(documentView.width, documentView.height) }
-            }
-            PdfScrollablePageView {
-                id: documentView; objectName: "documentView"; Layout.fillWidth: true; Layout.fillHeight: true; clip: true; document: pdfDocument
-                leftMargin: Math.max(0,(width-contentWidth)/2)
-                rightMargin: leftMargin
-                onLeftMarginChanged: if(contentWidth <= width) contentX=-leftMargin
-                function showPage(page) {
-                    if(page < 0 || page >= pdfDocument.pageCount || width <= 0 || height <= 0) return
-                    const size = pdfDocument.pagePointSize(page)
-                    goToLocation(page, Qt.point(0, 0), Math.min(width / size.width, height / size.height))
-                    contentX = -leftMargin; contentY = 0
+                Action { objectName: "pdfPrevious"; text: qsTranslate("Vetust", "← Previous"); enabled: documentView.canPrevious; onClicked: documentView.previousPage() }
+                Label { text: documentView.pageLabel; color: window.ink }
+                Action { objectName: "pdfNext"; text: qsTranslate("Vetust", "Next →"); enabled: documentView.canNext; onClicked: documentView.nextPage() }
+                ComboBox {
+                    id: pdfPageMode; objectName: "pdfPageMode"
+                    model: ["single", "double"]
+                    function label(mode) { return mode === "double" ? qsTranslate("Vetust", "Two pages") : qsTranslate("Vetust", "Single page") }
+                    displayText: label(currentText)
+                    delegate: ItemDelegate { required property string modelData; width: pdfPageMode.width; text: pdfPageMode.label(modelData) }
+                    currentIndex: documentView.doublePage ? 1 : 0
+                    onActivated: documentView.doublePage = currentIndex === 1
+                    Accessible.name: qsTranslate("Vetust", "Page layout")
                 }
-                function fitPage() { showPage(Math.max(0, currentPage)) }
+                Item { Layout.fillWidth: true }
+                Action { objectName: "pdfFitPage"; text: qsTranslate("Vetust", "Fit page"); onClicked: documentView.fitPage() }
+                Action { objectName: "pdfFitWidth"; text: qsTranslate("Vetust", "Fit width"); onClicked: documentView.fitToWidth() }
+            }
+            PdfReader {
+                id: documentView; objectName: "documentView"
+                Layout.fillWidth: true; Layout.fillHeight: true; document: pdfDocument
             }
         }
     }

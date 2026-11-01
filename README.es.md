@@ -11,7 +11,7 @@ pensada para disfrutar de la colección. No necesita un navegador ni una cuenta.
 
 ![Inicio de VETUSTware 0.3.2 con selecciones y categorías](docs/images/inicio.png)
 
-[Descargar 0.3.3](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.3)
+[Descargar 0.3.4](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.4)
 · [Instalación](INSTALACION.md)
 · [Bibliotecas](docs/BIBLIOTECAS.md)
 · [Reportar un problema](https://github.com/dejotaerre/vetustware/issues)
@@ -57,7 +57,10 @@ más de uno; esta captura corresponde a una sola pantalla.
 
 ![Ajustes globales de emulación](docs/images/ajustes.png)
 
-**Lectura integrada:** navegación por páginas, ajuste al ancho y cierre con la X.
+**Lectura integrada:** desde 0.3.4 puedes elegir Una página o Doble página.
+La portada aparece sola y después se muestran los pares 2–3, 4–5, etc.
+Los cursores izquierdo/derecho cambian de página o de par. Página completa
+y Ajustar al ancho actúan sobre la vista actual; X o Escape cierran el visor.
 
 ![Manual en español de Larry 7 en el visor PDF](docs/images/visor-pdf.png)
 
@@ -68,7 +71,7 @@ manuales y revistas que aparecen no se incluyen en el programa ni en sus descarg
 
 ## Empezar
 
-La versión **0.3.3 es una versión de prueba para Linux x86_64**.
+La versión **0.3.4 es una versión de prueba para Linux x86_64**.
 El ejecutable publicado se compiló y probó en **CachyOS con Qt 6.12**. No es un
 paquete universal: necesita bibliotecas compatibles del sistema. El código
 fuente permite compilar en otras distribuciones; su compatibilidad todavía
@@ -76,7 +79,7 @@ requiere pruebas.
 
 1. Instala las dependencias indicadas en [INSTALACION.md](INSTALACION.md) y un
    emulador DOSBox. Los perfiles se han trabajado principalmente con DOSBox Staging.
-2. Descarga y extrae `vetustware-0.3.3-linux-x86_64.tar.gz` desde
+2. Descarga y extrae `vetustware-0.3.4-linux-x86_64.tar.gz` desde
    [Releases](https://github.com/dejotaerre/vetustware/releases).
 3. Dentro de la carpeta extraída, ejecuta:
 

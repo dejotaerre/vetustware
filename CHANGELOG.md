@@ -1,5 +1,10 @@
 # Cambios de VETUSTware
 
+## 0.3.4 — 2026-10-31
+
+- Left/Right arrow keys navigate pages or spreads while the PDF reader is open.
+- PDF reader: optional two-page spreads, with a standalone cover followed by pages 2–3, 4–5, and navigation/fit controls for the whole spread.
+
 ## 0.3.3 — 2026-10-31
 
 - English interface by default, with Spanish selectable live in Settings.

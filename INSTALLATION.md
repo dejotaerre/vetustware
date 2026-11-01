@@ -1,4 +1,4 @@
-# VETUSTware 0.3.3 — installation
+# VETUSTware 0.3.4 — installation
 
 [Español](INSTALACION.md)
 
@@ -7,9 +7,9 @@ Its code is MIT-licensed. No browser or online account is required.
 
 ## Downloads and requirements
 
-- `vetustware-0.3.3-linux-x86_64.tar.gz`: executable, installer, helpers, source,
+- `vetustware-0.3.4-linux-x86_64.tar.gz`: executable, installer, helpers, source,
   English/Spanish interface translations and documentation.
-- `vetustware-0.3.3-fuentes.tar.gz`: source and documentation for a local build.
+- `vetustware-0.3.4-fuentes.tar.gz`: source and documentation for a local build.
 - `SHA256SUMS`: checksums for both archives. Run `sha256sum -c SHA256SUMS` in a
   directory containing both downloads to verify them.
 
@@ -72,6 +72,18 @@ settings. Imported profiles do not guarantee every game's compatibility.
 To contribute a language, see [Translating VETUSTware](docs/TRANSLATING.md).
 The installed copy includes the guide as `TRANSLATING.md` and translations in
 `translations/`. Additional JSON language files require no recompilation.
+
+## PDF reader
+
+Manuals, PDF extras and magazines share the same reader. Choose **Single page**
+or **Two pages** in its toolbar. In two-page mode the cover is alone, followed
+by pages 2–3, 4–5, and so on. A final unpaired page is shown alone.
+
+Use **Left/Right arrow keys** or Previous/Next to move between pages or spreads.
+The keys work while the reader is open, except while the layout menu is expanded.
+**Fit page** and **Fit width** size the whole current view without distortion.
+Changing the layout keeps the selected page. Each document opens at its cover;
+the chosen layout lasts for the application session. Close with **X** or **Escape**.
 
 ## Build from source
 

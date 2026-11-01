@@ -12,8 +12,8 @@ import tarfile
 import tempfile
 import time
 
-VERSION = '0.3.3'
-NATIVE = '''CMakeLists.txt Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml
+VERSION = '0.3.4'
+NATIVE = '''CMakeLists.txt PdfReader.qml Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml
 archive.cpp archive.h archive_tests.cpp backend.cpp backend.h backend_magazines.cpp
 magazines.cpp magazines.h magazines_tests.cpp displays.cpp displays.h
 emulation.cpp emulation.h emulation_tests.cpp home.cpp home_tests.cpp main.cpp

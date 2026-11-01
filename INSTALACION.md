@@ -1,4 +1,4 @@
-# VETUSTware — instalación de la versión de prueba 0.3.3
+# VETUSTware — instalación de la versión de prueba 0.3.4
 
 [English installation guide](INSTALLATION.md)
 
@@ -195,3 +195,16 @@ La configuración de cada juego puede elegir otro estilo o volver al global.
 
 El visor PDF usa una X para cerrar, centra las páginas verticales y abre cada
 documento desde su primera página. También puede cerrarse con Escape.
+
+## Visor PDF (mejoras de 0.3.4)
+
+Manuales, extras PDF y revistas usan el mismo visor. El selector **Una página /
+Doble página** permite mostrar la portada sola y luego los pares 2–3, 4–5, etc.
+Una última página sin pareja aparece sola. **Página completa** y **Ajustar al ancho**
+actúan sobre la vista completa, conservando las proporciones.
+
+Los cursores **izquierdo/derecho** y los botones Anterior/Siguiente cambian de
+página o de par. Los atajos funcionan con el visor abierto y se suspenden mientras
+está desplegado el selector de vista. Cambiar el modo conserva la página elegida;
+cada documento empieza en su portada y el modo se mantiene durante la sesión.
+**X** o **Escape** cierran el visor.

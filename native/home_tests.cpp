@@ -14,6 +14,8 @@
 #include <QQuickStyle>
 #include <QSignalSpy>
 #include <QWheelEvent>
+#include <QPdfWriter>
+#include <QPainter>
 
 class LocalizedEngine : public QQmlApplicationEngine {
 public:
@@ -119,6 +121,143 @@ private slots:
         QCOMPARE(f.row("adventure")["title"].toString(),QString("Graphic adventures"));
         QCOMPARE(dialog->property("title").toString(),QString("Global emulation settings"));
         QCOMPARE(dialog->property("draft").toMap(),draft);
+    }
+    void pdfSpreads_data(){
+        QTest::addColumn<int>("pages");
+        QTest::newRow("portada")<<1;
+        QTest::newRow("dos-paginas")<<2;
+        QTest::newRow("impar")<<5;
+        QTest::newRow("par")<<6;
+    }
+    void pdfSpreads(){
+        QFETCH(int,pages);
+        Fixture f;const QString pdf=f.temp.path()+"/reader.pdf";
+        {
+            QPdfWriter writer(pdf);writer.setResolution(72);writer.setPageSize(QPageSize(QPageSize::A4));
+            QPainter painter(&writer);
+            for(int page=0;page<pages;++page){
+                if(page>0){
+                    writer.setPageSize(QPageSize(page==2?QSizeF(297,210):QSizeF(210,297),QPageSize::Millimeter));
+                    QVERIFY(writer.newPage());
+                }
+                painter.fillRect(0,0,writer.width(),writer.height(),page%2?QColor("#e0c390"):QColor("#90c5d0"));
+                painter.setPen(Qt::black);painter.setFont(QFont("Sans",28));
+                painter.drawText(QRect(0,0,writer.width(),writer.height()),Qt::AlignCenter,QString("PDF test\nPage %1").arg(page+1));
+            }
+        }
+        LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());
+        engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        QSignalSpy warnings(&engine,&QQmlEngine::warnings);
+        engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->resize(1480,920);
+        auto document=window->findChild<QObject*>("pdfDocument");QVERIFY(document);
+        auto dialog=window->findChild<QObject*>("documentDialog");QVERIFY(dialog);
+        auto reader=window->findChild<QQuickItem*>("documentView");QVERIFY(reader);
+        auto picker=window->findChild<QObject*>("pdfPageMode");QVERIFY(picker);
+        auto next=window->findChild<QQuickItem*>("pdfNext");QVERIFY(next);
+        auto previous=window->findChild<QQuickItem*>("pdfPrevious");QVERIFY(previous);
+        auto widthButton=window->findChild<QQuickItem*>("pdfFitWidth");QVERIFY(widthButton);
+        auto fitButton=window->findChild<QQuickItem*>("pdfFitPage");QVERIFY(fitButton);
+        auto click=[&](QQuickItem *button){QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,button->mapToScene({button->width()/2,button->height()/2}).toPoint());};
+        document->setProperty("source",QUrl::fromLocalFile(pdf));
+        QVERIFY(QMetaObject::invokeMethod(dialog,"open"));
+        QTRY_VERIFY(dialog->property("opened").toBool());QTRY_VERIFY(reader->property("ready").toBool());
+        QTRY_COMPARE(document->property("pageCount").toInt(),pages);
+        auto left=window->findChild<QQuickItem*>("pdfLeftPage");QVERIFY(left);
+        auto right=window->findChild<QQuickItem*>("pdfRightPage");QVERIFY(right);
+        auto spread=window->findChild<QQuickItem*>("pdfSpread");QVERIFY(spread);
+        auto scroll=window->findChild<QObject*>("pdfSpreadView");QVERIFY(scroll);
+        QCOMPARE(reader->property("doublePage").toBool(),false);
+        QCOMPARE(reader->property("pageLabel").toString(),QString("1 / %1").arg(pages));
+        QTest::keyClick(window,Qt::Key_Left);QCOMPARE(reader->property("currentPage").toInt(),0);
+        for(int page=1;page<pages;++page){
+            QTest::keyClick(window,Qt::Key_Right);QTRY_COMPARE(reader->property("currentPage").toInt(),page);
+        }
+        QTest::keyClick(window,Qt::Key_Right);QCOMPARE(reader->property("currentPage").toInt(),pages-1);
+        for(int page=pages-2;page>=0;--page){
+            QTest::keyClick(window,Qt::Key_Left);QTRY_COMPARE(reader->property("currentPage").toInt(),page);
+        }
+        picker->setProperty("currentIndex",1);QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,1)));
+        QTRY_VERIFY(reader->property("doublePage").toBool());
+        QTRY_COMPARE(left->property("status").toInt(),1);
+        QVERIFY(!right->isVisible());QVERIFY(!previous->isEnabled());
+        QCOMPARE(picker->property("displayText").toString(),QString("Two pages"));
+        QCOMPARE(engine.languages.setLanguage("es"),QString());
+        QTRY_COMPARE(picker->property("displayText").toString(),QString("Doble página"));
+        QVERIFY(reader->property("doublePage").toBool());
+        reader->forceActiveFocus();
+        for(int page=1;page<pages;page+=2){
+            QTest::keyClick(window,Qt::Key_Right);QTRY_COMPARE(reader->property("firstPage").toInt(),page);
+        }
+        const int lastSpread=reader->property("firstPage").toInt();
+        QTest::keyClick(window,Qt::Key_Right);QCOMPARE(reader->property("firstPage").toInt(),lastSpread);
+        for(int page=lastSpread;page>0;page=std::max(0,page-2)){
+            QTest::keyClick(window,Qt::Key_Left);QTRY_COMPARE(reader->property("firstPage").toInt(),std::max(0,page-2));
+        }
+        QTest::keyClick(window,Qt::Key_Left);QCOMPARE(reader->property("firstPage").toInt(),0);
+        auto popup=qvariant_cast<QObject*>(picker->property("popup"));QVERIFY(popup);
+        QVERIFY(QMetaObject::invokeMethod(popup,"open"));QTRY_VERIFY(popup->property("opened").toBool());
+        QTest::keyClick(window,Qt::Key_Right);QCOMPARE(reader->property("firstPage").toInt(),0);
+        QVERIFY(QMetaObject::invokeMethod(popup,"close"));QTRY_VERIFY(!popup->property("visible").toBool());
+        next->forceActiveFocus();
+        QTest::keyClick(window,Qt::Key_Right);QTRY_COMPARE(reader->property("firstPage").toInt(),std::min(1,pages-1));
+        QTest::keyClick(window,Qt::Key_Left);QTRY_COMPARE(reader->property("firstPage").toInt(),0);
+        const QString screenshots=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
+        if(!screenshots.isEmpty()&&pages==6)QVERIFY(window->grabWindow().save(screenshots+"/pdf-cover.png"));
+        int start=1;
+        while(next->isEnabled()){
+            click(next);
+            QTRY_COMPARE(reader->property("firstPage").toInt(),start);
+            const int end=std::min(start+1,pages-1);
+            QCOMPARE(reader->property("lastPage").toInt(),end);
+            QCOMPARE(reader->property("pageLabel").toString(),(end>start?QString("%1–%2 / %3").arg(start+1).arg(end+1).arg(pages):QString("%1 / %2").arg(start+1).arg(pages)));
+            QTRY_COMPARE(left->property("status").toInt(),1);
+            QCOMPARE(right->isVisible(),end>start);
+            if(end>start){
+                QTRY_COMPARE(right->property("status").toInt(),1);
+                QCOMPARE(right->property("currentFrame").toInt(),end);
+                QVERIFY(right->x()+right->width()<=reader->width()+1);
+            }
+            QVERIFY(spread->width()<=reader->width()+1);QVERIFY(spread->height()<=reader->height()+1);
+            if(!screenshots.isEmpty()&&pages==6&&start==1){QTest::qWait(100);QVERIFY(window->grabWindow().save(screenshots+"/pdf-spread.png"));}
+            start+=2;
+        }
+        QVERIFY(!reader->property("canNext").toBool());
+        while(previous->isEnabled())click(previous);
+        QTRY_COMPARE(reader->property("firstPage").toInt(),0);
+        if(pages>=5){
+            QVERIFY(QMetaObject::invokeMethod(reader,"showPage",Q_ARG(QVariant,QVariant(2))));
+            QCOMPARE(reader->property("pageLabel").toString(),QString("2–3 / %1").arg(pages));
+            picker->setProperty("currentIndex",0);QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,0)));
+            QTRY_COMPARE(reader->property("pageLabel").toString(),QString("3 / %1").arg(pages));
+            click(next);QTRY_COMPARE(reader->property("currentPage").toInt(),3);
+            picker->setProperty("currentIndex",1);QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,1)));
+            QTRY_COMPARE(reader->property("pageLabel").toString(),QString("4–5 / %1").arg(pages));
+            click(widthButton);QVERIFY(reader->property("fitWidth").toBool());
+            QTRY_VERIFY(spread->height()>reader->height());
+            scroll->setProperty("contentY",40);QVERIFY(scroll->property("contentY").toDouble()>0);
+            window->resize(1050,720);QTest::qWait(100);
+            QVERIFY(spread->width()<=reader->width()+1);
+            click(fitButton);QVERIFY(!reader->property("fitWidth").toBool());
+            QTRY_VERIFY(spread->height()<=reader->height()+1);
+            QCOMPARE(scroll->property("contentY").toDouble(),0.0);
+        }
+        QTest::keyClick(window,Qt::Key_Escape);QTRY_VERIFY(!dialog->property("visible").toBool());
+        QTRY_VERIFY(document->property("source").toUrl().isEmpty());
+        const int closedPage=reader->property("currentPage").toInt();
+        QTest::keyClick(window,Qt::Key_Right);QTest::keyClick(window,Qt::Key_Left);
+        QCOMPARE(reader->property("currentPage").toInt(),closedPage);
+        document->setProperty("source",QUrl::fromLocalFile(pdf));QVERIFY(QMetaObject::invokeMethod(dialog,"open"));
+        QTRY_VERIFY(reader->property("ready").toBool());
+        QTRY_COMPARE(reader->property("firstPage").toInt(),0);
+        auto close=window->findChild<QQuickItem*>("closePdfButton");QVERIFY(close);click(close);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        // Qt avisa al liberar un documento asignando la URL vacía, también en el visor original.
+        for(const auto &entry:warnings){
+            for(const auto &warning:qvariant_cast<QList<QQmlError>>(entry[0]))
+                QCOMPARE(warning.description(),QString("QML PdfDocument: Cannot open: "));
+        }
     }
     void collectionsAndPagination(){
         Fixture f;auto &b=*f.backend;

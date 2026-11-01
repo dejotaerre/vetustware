@@ -11,13 +11,14 @@ interface designed for exploring your collection. No browser or account needed.
 
 ![VETUSTware home screen in English, with recommendations and favorites](docs/images/en/home.png)
 
-[Download 0.3.3](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.3)
+[Download 0.3.4](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.4)
 · [Installation guide](INSTALLATION.md)
 · [Library format (Spanish)](docs/BIBLIOTECAS.md)
 · [Report an issue](https://github.com/dejotaerre/vetustware/issues)
 
-**New in 0.3.3:** English is the default interface language, with Spanish
-available in **Settings → Interface language**. The screenshots show the English interface.
+**New in 0.3.4:** optional two-page PDF spreads, with the cover alone, and
+Left/Right arrow-key navigation. English is the default interface language;
+Spanish is available in **Settings → Interface language**.
 
 ## What you can do
 
@@ -60,7 +61,9 @@ appears only when more than one display is detected; none is shown in this captu
 
 ![Global settings with English selected as the interface language](docs/images/en/settings.png)
 
-**Integrated reading:** page navigation, fit-to-width and an X to close the viewer.
+**Integrated reading:** choose Single page or Two pages. The cover appears alone,
+followed by pages 2–3, 4–5, and so on. Left/Right arrows navigate pages or spreads;
+Fit page and Fit width apply to the current view. Close with X or Escape.
 This example opens Larry 7's English game design document from Extras.
 
 ![An English Larry 7 design document in the integrated PDF viewer](docs/images/en/pdf-viewer.png)
@@ -72,14 +75,14 @@ and magazines shown are not included with the application or its downloads.
 
 ## Get started
 
-Version **0.3.3 is a preview release for Linux x86_64**. The published executable
+Version **0.3.4 is a preview release for Linux x86_64**. The published executable
 was built and tested on **CachyOS with Qt 6.12**. It is not a universal package:
 you need compatible system libraries. Source builds are available for other
 distributions, but compatibility still needs testing.
 
 1. Install the dependencies listed in [INSTALLATION.md](INSTALLATION.md)
    and a DOSBox emulator. Most profile work has used DOSBox Staging.
-2. Download and extract `vetustware-0.3.3-linux-x86_64.tar.gz` from
+2. Download and extract `vetustware-0.3.4-linux-x86_64.tar.gz` from
    [Releases](https://github.com/dejotaerre/vetustware/releases).
 3. Inside the extracted folder, run:
 

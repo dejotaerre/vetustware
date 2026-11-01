@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(Vetust VERSION 0.3.3 LANGUAGES CXX)
+project(Vetust VERSION 0.3.4 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Sql Concurrent PdfQuick)
@@ -8,7 +8,7 @@ pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
 pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 qt_standard_project_setup(REQUIRES 6.5)
 qt_add_executable(vetust i18n.cpp i18n.h main.cpp backend.cpp backend_magazines.cpp magazines.cpp magazines.h home.cpp backend.h displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
-qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml)
+qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES PdfReader.qml Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml)
 target_link_libraries(vetust PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Sql Qt6::Concurrent Qt6::PdfQuick PkgConfig::LIBZIP PkgConfig::SDL2)
 
 
