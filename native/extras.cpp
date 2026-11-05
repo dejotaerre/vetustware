@@ -1,4 +1,5 @@
 #include "i18n.h"
+#include "librarylayout.h"
 #include "extras.h"
 #include "archive.h"
 #include <QJsonDocument>
@@ -16,9 +17,14 @@ static bool supported(const QString &name){
     static const QSet<QString> extensions={"pdf","txt","rtf","doc","xls","html","htm","png","jpg","jpeg","jfif","gif","bmp","mp3","ogg","wav","flac","mp2","mp4","avi"};
     return extensions.contains(QFileInfo(name).suffix().toLower());
 }
-void Extras::load(const QString &path){
+void Extras::load(const QString &path,const QString &metadata,const QString &dosboxMetadata,const QString &dosboxGames){
+    dosboxRoot=dosboxMetadata;
+    if(dosboxRoot.isEmpty()&&metadata.isEmpty()&&!path.isEmpty()&&QFileInfo(path+"/games/dosbox/metadata").isDir())dosboxRoot=path+"/games/dosbox/metadata";
+    gamesRoot=dosboxGames;
+    if(gamesRoot.isEmpty()&&!dosboxRoot.isEmpty()&&QFileInfo(dosboxRoot).fileName()=="metadata")gamesRoot=QFileInfo(dosboxRoot).absolutePath();
+    metadataRoot=metadata;
     library=QFileInfo(path).absoluteFilePath();games={};
-    QFile file(library+"/Complementos/extras.json");
+    QFile file(!dosboxRoot.isEmpty()?dosboxRoot+"/extras/extras.json":metadata.isEmpty()?LibraryLayout::path(library,"metadata/dosbox/extras/extras.json","Complementos/extras.json"):metadata+"/dosbox/extras/extras.json");
     if(!file.exists())return;
     if(file.size()>16*1024*1024||!file.open(QIODevice::ReadOnly))fail(uiText("Could not read the extras index."));
     const auto doc=QJsonDocument::fromJson(file.readAll());
@@ -43,7 +49,17 @@ QString Extras::prepare(const QString &game,int index,const QString &cache) cons
     if(!supported(name)||name.contains('/')||name.contains('\\')||name.contains(QChar(0))||!QRegularExpression("^[a-f0-9]{64}$").match(hash).hasMatch()||size<0||size>qint64(2)*1024*1024*1024)fail(uiText("The extra's data is invalid."));
     if(relative.isEmpty()||QDir::isAbsolutePath(relative)||relative.contains('\\')||relative.contains(':')||relative.split('/').contains(".."))fail(uiText("The extra's location is invalid."));
     if(member.isEmpty()||member.startsWith('/')||member.contains('\\')||member.contains(QChar(0))||member.split('/').contains("..")||member.section('/',0,0).contains(':'))fail(uiText("The extra's path is invalid."));
-    const QString archive=QFileInfo(library+'/'+relative).canonicalFilePath(),base=QFileInfo(library).canonicalFilePath();
+    QString relativeArchive=relative,archiveRoot=library;
+    if(relative.startsWith("games/dosbox/")&&!gamesRoot.isEmpty()){
+        relativeArchive=relative.section('/',2);archiveRoot=gamesRoot;
+    }else if(!dosboxRoot.isEmpty()){
+        if(!relative.startsWith("metadata/dosbox/")&&!relative.startsWith("metadatos/dosbox/"))fail(uiText("The extra's location is invalid."));
+        relativeArchive=relative.section('/',2);archiveRoot=dosboxRoot;
+    }else if(!metadataRoot.isEmpty()){
+        if(!relative.startsWith("metadata/")&&!relative.startsWith("metadatos/"))fail(uiText("The extra's location is invalid."));
+        relativeArchive=relative.section('/',1);archiveRoot=metadataRoot;
+    }
+    const QString archive=QFileInfo(archiveRoot+'/'+relativeArchive).canonicalFilePath(),base=QFileInfo(archiveRoot).canonicalFilePath();
     if(base.isEmpty()||archive.isEmpty()||!archive.startsWith(base+'/'))fail(uiText("The extras archive was not found in this library."));
     const QString path=QDir(cache).absoluteFilePath(hash+'/'+name);
     if(QFileInfo(QDir(cache).absoluteFilePath(hash)).isSymLink())fail(uiText("The cache folder contains a disallowed link."));

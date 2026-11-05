@@ -1,4 +1,5 @@
 #include "i18n.h"
+#include "librarylayout.h"
 #include "magazines.h"
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -11,9 +12,9 @@
 #include <stdexcept>
 
 static void fail(const QString &text){throw std::runtime_error(text.toStdString());}
-void Magazines::load(const QString &library){
-    base=library+"/Revistas";catalog={};loadError.clear();
-    QFile f(base+"/revistas.json");if(!f.exists())return;
+void Magazines::load(const QString &library,const QString &folder){
+    base=folder.isEmpty()?LibraryLayout::path(library,"magazines","Revistas"):folder;catalog={};loadError.clear();
+    QFile f(QFileInfo::exists(base+"/metadata/revistas.json")?base+"/metadata/revistas.json":base+"/revistas.json");if(!f.exists())return;
     if(f.size()>4*1024*1024||!f.open(QIODevice::ReadOnly)){loadError="Cannot read the magazine catalog.";return;}
     const auto doc=QJsonDocument::fromJson(f.readAll());
     if(!doc.isObject()||doc["format"].toInt()!=1||!doc["series"].isArray()||!doc["entries"].isArray()){

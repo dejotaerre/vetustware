@@ -9,7 +9,7 @@ ApplicationWindow {
     visible: true
     width: 1480; height: 920
     minimumWidth: 1050; minimumHeight: 720
-    title: "VETUSTware · The DOS Collection"
+    title: "VETUSTware · Old School Gamer"
     color: "#080f17"
     property color gold: "#e9bd79"
     property color cyan: "#78d8d1"
@@ -19,9 +19,12 @@ ApplicationWindow {
     property string view: "home"
     property string collectionKey: ""
     property string collectionTitle: ""
+    readonly property var sections: [{label:qsTranslate("Vetust", "HOME"),value:"home"},{label:qsTranslate("Vetust", "CATALOG"),value:"all"},{label:qsTranslate("Vetust", "FAVORITES"),value:"favorites"},{label:qsTranslate("Vetust", "RECENT"),value:"recent"},{label:"SCUMMVM",value:"scummvm"},{label:"ATARI 2600",value:"atari"},{label:"ARCADE",value:"arcade"},{label:qsTranslate("Vetust", "MAGAZINES"),value:"magazines"}]
     property var spotlight: vetust.homeSpotlight
     property int artRevision: 0
-    property bool modalOpen: storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible
+    property bool modalOpen: (arcadeLoader.item ? arcadeLoader.item.detailsOpen : false) || backgroundsDialog.visible || runtimesDialog.visible || storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible || (scummLoader.item ? scummLoader.item.detailsOpen : false) || (atariLoader.item ? atariLoader.item.detailsOpen : false)
+    property string catalogDetailsEngine: ""
+    readonly property bool unifiedCatalogVisible: view === "all" && collectionKey === ""
     property bool onlyTested: false
     property int shotIndex: 0
     property var shots: game.shots || []
@@ -32,20 +35,34 @@ ApplicationWindow {
     }
     function art(id) { return id ? "image://art/" + id + "/" + artRevision : "" }
     function applyFilter() {
-        if(view === "magazines") return
+        if(unifiedCatalogVisible) return
+        if(view === "arcade" || view === "magazines" || view === "scummvm" || view === "atari") return
         vetust.filter(search.text, genre.currentText, view === "home" ? "all" : view, onlyTested, collectionKey)
         catalogGrid.positionViewAtBeginning()
     }
     function navigate(target) {
-        view=target; collectionKey=""; collectionTitle=""; search.clear(); genre.currentIndex=0; onlyTested=false
+        catalogDetailsEngine=""; view=target; collectionKey=""; collectionTitle=""; search.clear(); genre.currentIndex=0; onlyTested=false
         debounce.stop(); applyFilter()
-        if(target === "home") vetust.refreshHome()
+        if(target === "home") vetust.refreshHome(true)
         if(target === "magazines") magazinesView.reset()
+        if(target === "scummvm") vetust.scumm.enter()
+        if(target === "arcade") vetust.arcade.enter()
+        if(target === "atari") vetust.atari.enter()
     }
     function openCollection(row) {
         navigate("all"); collectionKey=row.key; collectionTitle=row.title; applyFilter()
     }
     function openGame(id) { vetust.selectGame(id); details.open() }
+    function openCatalogGame(engine, id) {
+        if(engine === "dosbox") { openGame(id); return }
+        catalogDetailsEngine=engine
+        Qt.callLater(function() {
+            const loader=engine === "scummvm" ? scummLoader : engine === "atari" ? atariLoader : arcadeLoader
+            const source=engine === "scummvm" ? vetust.scumm.games : engine === "atari" ? vetust.atari.games : vetust.arcade.games
+            const entry=source.find(g=>(engine === "scummvm" ? g.folder : g.id) === id)
+            if(loader.item && entry)loader.item.showGame(entry)
+        })
+    }
     function fullscreen() { visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen }
     onClosing: function(close) { if (vetust.busy) { close.accepted=false; busyDialog.open() } }
     Connections {
@@ -64,9 +81,64 @@ ApplicationWindow {
             else Qt.openUrlExternally(url)
         }
     }
-    Image { anchors.fill: parent; source: window.art(view === "home" ? (spotlight.background || spotlight.cover) : (game.background || shot)); fillMode: Image.PreserveAspectCrop; opacity: 0.07; asynchronous: true; sourceSize.width: 1400 }
-    Rectangle { anchors.fill: parent; gradient: Gradient { GradientStop { position: 0; color: "#50081018" } GradientStop { position: 1; color: "#f0080f17" } } }
+    function sectionBackground(section) {
+        const custom=vetust.sectionBackgrounds[section]
+        if(custom) return custom
+        if(section === "arcade") return Qt.resolvedUrl("assets/arcade-header.png")
+        if(section === "scummvm") return Qt.resolvedUrl("assets/scummvm-header.png")
+        if(section === "atari") return Qt.resolvedUrl("assets/atari2600-header.png")
+        if(section === "magazines") return Qt.resolvedUrl("assets/magazines.jpg")
+        return Qt.resolvedUrl("assets/retro-library.jpg")
+    }
+    function sectionColor(section) {
+        return section === "arcade" ? "#323145" : section === "atari" ? "#49382c"
+             : section === "magazines" ? "#494133" : "#253b49"
+    }
+    LibraryBackdrop {
+        anchors.fill: parent
+        source: window.sectionBackground(window.view)
+        baseColor: window.sectionColor(window.view)
+    }
 
+    component MenuIcon : Canvas {
+        required property string symbol
+        property color ink: window.muted
+        width: 18; height: 18
+        canvasSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
+        onSymbolChanged: requestPaint()
+        onInkChanged: requestPaint()
+        onCanvasSizeChanged: requestPaint()
+        onPaint: {
+            const c = getContext("2d")
+            c.reset(); c.scale(canvasSize.width / 24, canvasSize.height / 24)
+            c.strokeStyle = ink; c.lineWidth = 1.8; c.lineCap = "round"; c.lineJoin = "round"
+            function line(points) {
+                c.beginPath(); c.moveTo(points[0][0], points[0][1])
+                for (let i = 1; i < points.length; ++i) c.lineTo(points[i][0], points[i][1])
+                c.stroke()
+            }
+            function circle(x, y, radius) { c.beginPath(); c.arc(x, y, radius, 0, Math.PI * 2); c.stroke() }
+            switch (symbol) {
+            case "home":
+                line([[3,10],[12,3],[21,10]]); line([[5,9],[5,21],[10,21],[10,14],[14,14],[14,21],[19,21],[19,9]]); break
+            case "all":
+                for (let x = 4; x <= 14; x += 10) for (let y = 4; y <= 14; y += 10) c.strokeRect(x,y,6,6)
+                break
+            case "favorites":
+                c.beginPath(); c.moveTo(12,21); c.bezierCurveTo(9,18,3,13,3,8); c.bezierCurveTo(3,2,10,2,12,7); c.bezierCurveTo(14,2,21,2,21,8); c.bezierCurveTo(21,13,15,18,12,21); c.stroke(); break
+            case "recent":
+                circle(12,12,9); line([[12,6],[12,12],[16,14]]); break
+            case "scummvm":
+                line([[5,3],[5,20],[9,16],[12,21],[16,19],[13,14],[20,14],[5,3]]); break
+            case "atari":
+                c.strokeRect(3,16,18,5); line([[12,16],[12,8]]); circle(12,5,3); circle(7,18.5,1); break
+            case "arcade":
+                line([[6,3],[19,3],[18,13],[21,16],[20,21],[4,21],[5,16],[8,13],[6,3]]); c.strokeRect(9,6,7,5); line([[9,16],[16,16]]); break
+            case "magazines":
+                line([[12,5],[8,3],[2,3],[2,19],[8,19],[12,21],[16,19],[22,19],[22,3],[16,3],[12,5],[12,21]]); line([[5,7],[8,7]]); line([[16,7],[19,7]]); break
+            }
+        }
+    }
     component Action : Button {
         id: action
         property bool primary: false
@@ -110,23 +182,34 @@ ApplicationWindow {
         anchors.fill: parent; anchors.margins: window.width < 1200 ? 20 : 32
         spacing: 16
         RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: 52; spacing: window.width < 1200 ? 12 : 24
+            Layout.fillWidth: true; Layout.preferredHeight: 52; spacing: window.width < 1400 ? 4 : window.width < 1800 ? 8 : 18
             RowLayout {
                 spacing: 14
                 Rectangle { width: 64; height: 47; radius: 8; color: "#0b1722"; border.color: "#64543f"
                     Text { anchors.centerIn: parent; text: "V:>_"; color: window.gold; font.pixelSize: 23; font.family: "monospace" }
                 }
                 Column {
+                    visible: window.width >= 1480
                     spacing: 5
-                    Text { text: "VETUSTware"; color: window.ink; font.pixelSize: window.width < 1200 ? 22 : 27; font.letterSpacing: 1.5; font.weight: Font.DemiBold }
-                    Text { text: "THE DOS COLLECTION"; color: window.muted; font.pixelSize: 8; font.letterSpacing: 3 }
+                    Text { text: "VETUSTware"; color: window.ink; font.pixelSize: window.width < 1400 ? 22 : 27; font.letterSpacing: 1.5; font.weight: Font.DemiBold }
+                    Text { text: "Old School Gamer"; color: window.muted; font.pixelSize: 8; font.letterSpacing: 3 }
                 }
             }
-            Repeater { model: [{label:qsTranslate("Vetust", "HOME"),value:"home"},{label:qsTranslate("Vetust", "CATALOG"),value:"all"},{label:qsTranslate("Vetust", "FAVORITES"),value:"favorites"},{label:qsTranslate("Vetust", "RECENT"),value:"recent"},{label:qsTranslate("Vetust", "MAGAZINES"),value:"magazines"}]
+            Repeater { model: window.sections
                 delegate: Button {
+                    id: navigationButton
                     required property var modelData
-                    implicitHeight: 48; implicitWidth: contentItem.implicitWidth+10
-                    contentItem: Text { text: modelData.label; color: window.view===modelData.value ? window.gold : window.muted; font.pixelSize: 11; font.letterSpacing: 1.4; verticalAlignment: Text.AlignVCenter }
+                    objectName: "navigation-"+modelData.value
+                    Accessible.name: modelData.label
+                    readonly property color navigationColor: window.view===modelData.value ? window.gold : window.muted
+                    leftPadding: window.width < 1400 ? 2 : window.width < 1800 ? 4 : 5
+                    rightPadding: leftPadding
+                    implicitHeight: 48; implicitWidth: contentItem.implicitWidth+leftPadding+rightPadding
+                    contentItem: Row {
+                        spacing: window.width < 1400 ? 4 : 7
+                        MenuIcon { anchors.verticalCenter: parent.verticalCenter; width: window.width < 1400 ? 16 : 18; height: width; symbol: navigationButton.modelData.value; ink: navigationButton.navigationColor }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: navigationButton.modelData.label; color: navigationButton.navigationColor; font.pixelSize: window.width < 1400 ? 10 : 11; font.letterSpacing: window.width < 1800 ? 0.5 : 1.4 }
+                    }
                     background: Rectangle { color: "transparent"; Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: window.gold; visible: window.view===modelData.value } }
                     onClicked: window.navigate(modelData.value)
                 }
@@ -134,7 +217,7 @@ ApplicationWindow {
             Item { Layout.fillWidth: true }
             TextField {
                 id: search; objectName: "searchField"
-                Layout.preferredWidth: window.width < 1200 ? 155 : 235
+                Layout.preferredWidth: window.width < 1400 ? 120 : window.width < 1600 ? 180 : 235
                 implicitHeight: 40
                 placeholderText: window.view === "magazines" ? qsTranslate("Vetust", "Search magazines…") : qsTranslate("Vetust", "Search games…"); color: window.ink; placeholderTextColor: window.muted; font.pixelSize: 12
                 leftPadding: 14; rightPadding: 14; selectByMouse: true
@@ -174,7 +257,7 @@ ApplicationWindow {
                             Item { Layout.fillHeight: true }
                             RowLayout {
                                 Action { text: qsTranslate("Vetust", "Explore this game  →"); primary: true; enabled: !!window.spotlight.id; onClicked: window.openGame(window.spotlight.id) }
-                                LabelText { text: qsTranslate("Vetust", "7,200 stories to discover"); visible: window.width >= 1300; font.pixelSize: 10 }
+                                LabelText { objectName: "catalogTotalLabel"; text: qsTranslate("Vetust", "%1 stories to discover").arg(vetust.catalogCount.toLocaleString(Qt.locale(languages.current),"f",0)); visible: window.width >= 1300; font.pixelSize: 10 }
                             }
                         }
                         Rectangle {
@@ -219,7 +302,7 @@ ApplicationWindow {
             footer: Item { width: homeFeed.width; height: 60; LabelText { anchors.centerIn: parent; text: qsTranslate("Vetust", "Your collection, at your pace. All recommendations are made on this computer."); font.pixelSize: 11 } }
         }
         ColumnLayout {
-            visible: window.view !== "home" && window.view !== "magazines"
+            visible: !window.unifiedCatalogVisible && window.view !== "arcade" && window.view !== "home" && window.view !== "magazines" && window.view !== "scummvm" && window.view !== "atari"
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 16
             RowLayout {
                 Layout.fillWidth: true; spacing: 12
@@ -257,15 +340,39 @@ ApplicationWindow {
                 }
             }
         }
+        Loader {
+            id: unifiedLoader; active: window.unifiedCatalogVisible; visible: active
+            Layout.fillWidth: true; Layout.fillHeight: true
+            sourceComponent: CatalogView { query: search.text; onOpenGame: (engine,id)=>window.openCatalogGame(engine,id) }
+        }
+        Loader { id: arcadeLoader; active: window.view === "arcade" || window.catalogDetailsEngine === "arcade"; visible: window.view === "arcade"; Layout.fillWidth: true; Layout.fillHeight: true; sourceComponent: ArcadeView { query: search.text } }
+        Loader { id: atariLoader; active: window.view === "atari" || window.catalogDetailsEngine === "atari"; visible: window.view === "atari"; Layout.fillWidth: true; Layout.fillHeight: true; sourceComponent: AtariView { query: search.text } }
+        Loader { id: scummLoader; active: window.view === "scummvm" || window.catalogDetailsEngine === "scummvm"; visible: window.view === "scummvm"; Layout.fillWidth: true; Layout.fillHeight: true; sourceComponent: ScummView { query: search.text } }
         MagazinesView { id: magazinesView; visible: window.view === "magazines"; Layout.fillWidth: true; Layout.fillHeight: true; query: search.text; onNavigationChanged: search.clear() }
         Rectangle { Layout.fillWidth: true; height: 1; color: "#25313c" }
         RowLayout { Layout.fillWidth: true; LabelText { text: window.view === "magazines" ? qsTranslate("Vetust", "Select a collection or magazine     /  Search     F11  Fullscreen") : qsTranslate("Vetust", "Select a cover to open game details     /  Search     F11  Fullscreen"); font.pixelSize: 9 } Item { Layout.fillWidth: true } LabelText { text: qsTranslate("Vetust", "●  LOCAL COLLECTION"); color: "#8ba7b4"; font.pixelSize: 9; font.letterSpacing: 1.2 } }
     }
     Dialog {
         id: details; objectName: "gameDetails"
-        anchors.centerIn: parent; width: Math.min(1320,window.width-60); height: Math.min(640,window.height-50)
+        background: LibraryBackdrop { source: window.art(game.cover || game.box3d || (shots.length ? shots[0] : "")) }
+        parent: Overlay.overlay; x: 0; y: 0; width: parent.width; height: parent.height; margins: 0
         modal: true; focus: true; title: game.title || qsTranslate("Vetust", "Game details")
-        footer: Item { height: 56; Action { text: qsTranslate("Vetust", "Close"); anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 12; implicitWidth: 100; onClicked: details.close() } }
+        standardButtons: Dialog.NoButton
+        footer: null
+        header: Item {
+            implicitHeight: 56
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 12
+                Label { Layout.fillWidth: true; text: details.title; textFormat: Text.PlainText; color: window.gold; font.pixelSize: 14; font.bold: true; elide: Text.ElideRight }
+                ToolButton {
+                    objectName: "closeGameDetailsButton"; text: "×"; font.pixelSize: 26
+                    implicitWidth: 36; implicitHeight: 32
+                    Accessible.name: qsTranslate("Vetust", "Close")
+                    ToolTip.text: qsTranslate("Vetust", "Close (Esc)"); ToolTip.visible: hovered
+                    onClicked: details.close()
+                }
+            }
+        }
         palette.window: "#101c27"; palette.windowText: window.gold; palette.button: "#1b2d3b"; palette.buttonText: window.ink
         contentItem: RowLayout {
             id: hero
@@ -276,7 +383,15 @@ ApplicationWindow {
                 Layout.preferredWidth: Math.min(260,window.width*0.18)
                 Layout.fillHeight: true; spacing: 18
                 Item { Layout.fillHeight: true; Layout.maximumHeight: 12 }
-                Art { Layout.fillWidth: true; Layout.fillHeight: true; Layout.maximumHeight: 370; Layout.minimumHeight: 230; source: window.art(game.box3d || game.cover) }
+                Art { Layout.fillWidth: true; Layout.fillHeight: true; Layout.maximumHeight: 370; Layout.minimumHeight: 230; source: window.art(game.box3d || game.cover)
+                    MouseArea {
+                        objectName: "dosDetailPlayImage"
+                        anchors.fill: parent; enabled: playDosButton.enabled
+                        cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                        ToolTip.text: playDosButton.text; ToolTip.visible: containsMouse && enabled
+                        onClicked: playDosButton.clicked()
+                    }
+                }
                 LabelText { Layout.alignment: Qt.AlignHCenter; text: game.realCover ? qsTranslate("Vetust", "FROM THE ORIGINAL COLLECTION") : qsTranslate("Vetust", "GAME SCREENSHOT"); font.pixelSize: 8; font.letterSpacing: 1.6 }
                 Item { Layout.fillHeight: true; Layout.maximumHeight: 12 }
             }
@@ -293,7 +408,7 @@ ApplicationWindow {
                 Text { Layout.fillWidth: true; text: game.summary || qsTranslate("Vetust", "No description in the catalog."); color: "#a8b6c2"; font.pixelSize: 12; lineHeight: 1.35; wrapMode: Text.WordWrap; maximumLineCount: window.height<800 ? 2 : 3; elide: Text.ElideRight }
                 Button { text: qsTranslate("Vetust", "Read full details ↗"); padding: 0; implicitHeight: 22; contentItem: Text { text: parent.text; color: "#c6b08d"; font.pixelSize: 11 } background: Item {} onClicked: infoDialog.open() }
                 Flow { spacing: 10; Layout.topMargin: 2; Layout.fillWidth: true
-                    Action { text: vetust.busy ? qsTranslate("Vetust", "IN SESSION") : qsTranslate("Vetust", "▶   PLAY"); primary: true; enabled: !!game.playable && !vetust.busy; implicitHeight: 48; implicitWidth: 140; onClicked: vetust.play() }
+                    Action { id: playDosButton; objectName: "playDos"; text: vetust.busy ? qsTranslate("Vetust", "IN SESSION") : qsTranslate("Vetust", "▶   PLAY"); primary: true; enabled: !!game.playable && !vetust.busy; implicitHeight: 48; implicitWidth: 140; onClicked: vetust.play() }
                     Action { text: game.favorite ? "♥" : "♡"; highlightedText: !!game.favorite; implicitHeight: 48; implicitWidth: 48; onClicked: vetust.toggleFavorite(); ToolTip.text: qsTranslate("Vetust", "Favorite · F"); ToolTip.visible: hovered }
                     Action { text: qsTranslate("Vetust", "▤  Manual"); visible: !!game.manual; implicitHeight: 48; onClicked: vetust.openManual() }
                     Action { objectName: "extrasButton"; text: qsTranslate("Vetust", "Extras"); visible: vetust.gameExtras.length > 0; implicitHeight: 48; onClicked: extrasDialog.begin() }
@@ -307,9 +422,11 @@ ApplicationWindow {
                         delegate:ItemDelegate { required property string modelData; width:editionPicker.width; text:editionPicker.label(modelData) }
                         currentIndex: game.spanish ? 0 : 1; enabled: !vetust.busy; implicitHeight: 32; implicitWidth: 180; palette.button: "#121e28"; palette.buttonText: window.ink; palette.text: window.ink; palette.base: "#121e28"; onActivated: vetust.setSpanish(currentIndex===0) }
                 }
-                RowLayout {
+                Flow {
+                    Layout.fillWidth: true
                     spacing: 8
                     Action { text: qsTranslate("Vetust", "⚙  Configure this game"); implicitHeight: 32; enabled: !vetust.busy; onClicked: emulatorDialog.begin(false) }
+                    Action { objectName: "openDosFolder"; text: qsTranslate("Vetust", "Open folder"); implicitHeight: 32; enabled: !!game.playable && !vetust.busy; onClicked: vetust.openGameFolder() }
                     Action {
                         id: gameTools; objectName: "gameToolsButton"
                         text: "⋯"; implicitHeight: 32; implicitWidth: 44; enabled: !vetust.busy
@@ -362,14 +479,30 @@ ApplicationWindow {
         Rectangle { visible: vetust.busy && vetust.progress>=0; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.margins: 3; height: 2; radius: 1; width: (parent.width-6)*vetust.progress/100; color: window.cyan }
     }
     Dialog {
-        id: infoDialog; anchors.centerIn: parent; width: Math.min(780,window.width-100); height: Math.min(680,window.height-100); modal: true; title: game.title || qsTranslate("Vetust", "Details"); standardButtons: Dialog.Close
+        id: infoDialog; objectName: "gameInfoDialog"; anchors.centerIn: parent; width: Math.min(780,window.width-100); height: Math.min(680,window.height-100); modal: true; focus: true; title: game.title || qsTranslate("Vetust", "Details")
+        standardButtons: Dialog.NoButton
+        footer: null
+        header: Item {
+            implicitHeight: 56
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 12
+                Label { Layout.fillWidth: true; text: infoDialog.title; textFormat: Text.PlainText; color: window.gold; font.pixelSize: 14; font.bold: true; elide: Text.ElideRight }
+                ToolButton {
+                    objectName: "closeGameInfoButton"; text: "×"; font.pixelSize: 26
+                    implicitWidth: 36; implicitHeight: 32
+                    Accessible.name: qsTranslate("Vetust", "Close")
+                    ToolTip.text: qsTranslate("Vetust", "Close (Esc)"); ToolTip.visible: hovered
+                    onClicked: infoDialog.close()
+                }
+            }
+        }
         palette.window: "#111e29"; palette.windowText: window.gold; palette.button: "#1b2d3b"; palette.buttonText: window.ink
         ScrollView { anchors.fill: parent; clip: true; TextArea { width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WordWrap; text: (game.year || "")+" · "+(game.developer || "")+"\n\n"+(game.description || qsTranslate("Vetust", "No description in the catalog.")); color: "#bccbd5"; font.pixelSize: 14; background: Item {} } }
     }
     Dialog { id: imageDialog; anchors.centerIn: parent; width: window.width-100; height: window.height-90; modal: true; standardButtons: Dialog.Close; palette.window: "#080f17"; palette.button: "#1b2d3b"; palette.buttonText: window.ink; Art { anchors.fill: parent; source: window.art(shot); sourceSize.width: 1600 } }
     PdfDocument { id: pdfDocument; objectName: "pdfDocument" }
     Dialog {
-        id: manualDialog; objectName: "documentDialog"; anchors.centerIn: parent; width: window.width-100; height: window.height-80; modal: true; focus: true; title: qsTranslate("Vetust", "Manual · ") + (game.title || "")
+        id: manualDialog; objectName: "documentDialog"; parent: Overlay.overlay; x: 0; y: 0; width: parent.width; height: parent.height; margins: 0; modal: true; focus: true; title: qsTranslate("Vetust", "Manual · ") + (game.title || "")
         standardButtons: Dialog.NoButton
         footer: null
         palette.window: "#111e29"; palette.windowText: window.ink; palette.button: "#1b2d3b"; palette.buttonText: window.ink
@@ -419,11 +552,17 @@ ApplicationWindow {
             }
         }
     }
-    Dialog { id: busyDialog; anchors.centerIn: parent; width:Math.min(620,window.width-80); modal: true; title: qsTranslate("Vetust", "A task is in progress"); standardButtons: Dialog.Ok; Label { wrapMode:Text.WordWrap; text: qsTranslate("Vetust", "Wait for the file or game to finish preparing.\nIf DOSBox is open, close it with Ctrl+F9 before quitting.") } }
+    Dialog { id: busyDialog; anchors.centerIn: parent; width:Math.min(620,window.width-80); modal: true; title: qsTranslate("Vetust", "A task is in progress"); standardButtons: Dialog.Ok; Label { wrapMode:Text.WordWrap; text: qsTranslate("Vetust", "Wait for the current task to finish and close any running emulator before quitting.") } }
     ExtrasDialog { id: extrasDialog }
+    BackgroundsDialog {
+        id: backgroundsDialog
+        sections: window.sections
+        previewSource: window.sectionBackground(section)
+    }
+    RuntimesDialog { id:runtimesDialog }
     StorageDialog { id:storageDialog }
-    Component.onCompleted: { if(vetust.storageSettings.needsSetup)storageDialog.begin() }
-    EmulatorDialog { id: emulatorDialog; onStorageRequested:{emulatorDialog.close();storageDialog.begin()} }
+    Component.onCompleted: { vetust.refreshHome(true); if(vetust.storageSettings.needsSetup)storageDialog.begin() }
+    EmulatorDialog { id: emulatorDialog; onBackgroundsRequested: backgroundsDialog.begin(window.view); onStorageRequested:{emulatorDialog.close();storageDialog.begin()} onRuntimesRequested:{emulatorDialog.close();runtimesDialog.begin()} }
     Timer { interval: 60000; running: true; repeat: true; onTriggered: vetust.refreshHome() }
     Shortcut { sequence: "F11"; onActivated: window.fullscreen() }
     Shortcut { sequence: "/"; enabled: !window.modalOpen && !search.activeFocus; onActivated: search.forceActiveFocus() }

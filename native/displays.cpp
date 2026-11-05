@@ -1,10 +1,10 @@
 #include "displays.h"
 #include <SDL.h>
 
-QVariantList Displays::available(){
+QVariantList Displays::available(const char *driver){
     QVariantList result;
-    // La consulta y el emulador usan X11 para compartir numeración y coordenadas.
-    if(SDL_VideoInit("x11")!=0)return result;
+    // La consulta usa el mismo controlador de vídeo que el emulador.
+    if(SDL_VideoInit(driver)!=0)return result;
     for(int i=0;i<SDL_GetNumVideoDisplays();++i){
         SDL_Rect bounds;
         if(SDL_GetDisplayBounds(i,&bounds)!=0)continue;
@@ -20,6 +20,20 @@ QVariantMap Displays::resolve(const QString &name,const QVariantList &screens){
     for(const auto &value:screens)if(value.toMap()["id"].toString()==name)return value.toMap();
     // Si se desconecta la pantalla elegida, se usa la primera disponible sin borrar la preferencia.
     return screens.isEmpty()?QVariantMap{}:screens.first().toMap();
+}
+QVariantMap Displays::forNativeSdl(const QVariantMap &screen,const QVariantList &waylandScreens){
+    if(screen.isEmpty())return {};
+    auto result=screen;result["driver"]="x11";
+    // XWayland y Wayland pueden asignar nombres e índices distintos al mismo monitor.
+    for(const auto &value:waylandScreens){
+        const auto candidate=value.toMap();
+        if(candidate["width"].toInt()>0&&candidate["height"].toInt()>0 &&
+           candidate["x"]==screen["x"]&&candidate["y"]==screen["y"]&&
+           candidate["width"]==screen["width"]&&candidate["height"]==screen["height"]){
+            result["index"]=candidate["index"];result["driver"]="wayland";break;
+        }
+    }
+    return result;
 }
 QJsonObject Displays::options(const QString &engine,const QVariantMap &screen){
     if(screen.isEmpty())return {};

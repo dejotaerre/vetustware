@@ -82,6 +82,16 @@ int main(int argc,char **argv){
         check(Displays::resolve("DP-2",{primary})==primary,"pantalla desconectada usa una disponible");
         check(Displays::resolve("DP-2",{}).isEmpty()&&Displays::resolve("",{primary,secondary}).isEmpty(),"sin pantallas y modo automático");
         check(Displays::options("staging",secondary)["sdl.display"]=="1"&&Displays::options("dosbox-x",secondary)["sdl.display"]=="2","numeración diferente de motores");
+        auto xscreen=secondary;xscreen["width"]=1920;xscreen["height"]=1080;
+        auto native=xscreen;native["id"]="Acer";native["index"]=0;
+        const auto sdlScreen=Displays::forNativeSdl(xscreen,{native});
+        check(sdlScreen["driver"]=="wayland"&&sdlScreen["index"]==0,"Stella y MAME identifican pantalla Wayland por geometría, no nombre ni índice X11");
+        check(Displays::forNativeSdl(xscreen,{primary})["driver"]=="x11","SDL conserva X11 si no identifica el monitor nativo");
+        check(Displays::forNativeSdl({},{}).isEmpty(),"SDL automático sin selección forzada");
+        auto other=native;other["x"]=0;other["index"]=1;
+        check(Displays::forNativeSdl(xscreen,{other,native})["index"]==0,"MAME selecciona el monitor por posición aunque el orden cambie");
+        auto incomplete=native;incomplete["width"]=0;
+        check(Displays::forNativeSdl(xscreen,{incomplete})["driver"]=="x11","SDL no selecciona un monitor nativo con geometría inválida");
         check(Displays::options("classic",secondary).isEmpty()&&Displays::options("staging",{}).isEmpty(),"no introducir opciones incompatibles");
         QProcessEnvironment env;env.insert("SDL_VIDEO_CENTERED","1");Displays::environment(env,secondary);
         check(env.value("SDL_VIDEODRIVER")=="x11"&&env.value("SDL_VIDEO_FULLSCREEN_DISPLAY")=="1"&&env.value("SDL_VIDEO_WINDOW_POS")=="2600,40"&&!env.contains("SDL_VIDEO_CENTERED"),"entorno clásico en pantalla secundaria");

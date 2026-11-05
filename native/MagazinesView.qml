@@ -86,7 +86,7 @@ ColumnLayout {
         Label {
             anchors.centerIn: parent; width: Math.min(620,parent.width-40)
             visible: grid.count===0; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap; color: "#91a3b3"; font.pixelSize: 16
-            text: vetust.magazineError || (page.series.length===0 ? qsTranslate("Vetust", "This library does not include magazines.\nConnect the drive containing the Revistas folder.") : qsTranslate("Vetust", "No magazines match your search."))
+            text: vetust.magazineError || (page.series.length===0 ? qsTranslate("Vetust", "This library does not include magazines.\nConnect the drive containing the magazines folder.") : qsTranslate("Vetust", "No magazines match your search."))
         }
     }
 }

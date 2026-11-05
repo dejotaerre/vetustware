@@ -1,8 +1,11 @@
 #include "i18n.h"
+#include "librarylayout.h"
 #include <QTemporaryDir>
+#include <QTemporaryFile>
 #include "backend.h"
 #include "displays.h"
 #include <QGuiApplication>
+#include <QImageReader>
 #include <QFile>
 #include <QSaveFile>
 #include <QDir>
@@ -37,7 +40,7 @@ QImage ArtProvider::requestImage(const QString &identifier,QSize *size,const QSi
         QImage img(path);
         if(img.isNull()){
             QByteArray data;
-            {QMutexLocker lock(&mutex);const QString path=Storage(root).library+"/Content/XODOSMetadata.zip";if(!zip||zipPath!=path){zip=std::make_unique<Archive>(path);zipPath=path;}data=zip->read(asset);}
+            {QMutexLocker lock(&mutex);const QString path=Storage(root).sharedPath("metadata/dosbox/recursos.zip","Content/XODOSMetadata.zip");if(!zip||zipPath!=path){zip=std::make_unique<Archive>(path);zipPath=path;}data=zip->read(asset);}
             img.loadFromData(data);if(img.isNull())return {};
             img=img.scaled(width,width,Qt::KeepAspectRatio,Qt::SmoothTransformation);
             QDir().mkpath(QFileInfo(path).absolutePath());QSaveFile output(path);
@@ -46,8 +49,75 @@ QImage ArtProvider::requestImage(const QString &identifier,QSize *size,const QSi
         if(size)*size=img.size();return img;
     }catch(const std::exception &e){qWarning()<<e.what();return {};}
 }
+static const QStringList backgroundSections={"home","all","favorites","recent","scummvm","atari","arcade","magazines"};
+
+QString Backend::setSectionBackground(const QString &section,const QUrl &image){
+    if(!backgroundSections.contains(section))return uiText("Unknown section.");
+    const QDir dir(root+"/config/backgrounds");
+    const QString path=dir.filePath(section+".png");
+    if(image.isEmpty()){
+        if(QFileInfo::exists(path) && !QFile::remove(path))return uiText("Cannot restore the default background.");
+        backgrounds.remove(section);
+    }else{
+        if(!image.isLocalFile())return uiText("Choose a local image.");
+        QImageReader reader(image.toLocalFile());
+        reader.setAutoTransform(true);
+        const QSize size=reader.size();
+        if(size.width()>1920 || size.height()>1920)reader.setScaledSize(size.scaled(1920,1920,Qt::KeepAspectRatio));
+        const QImage decoded=reader.read();
+        if(decoded.isNull())return uiText("Could not open the image.");
+        QSaveFile output(path);
+        if(!dir.mkpath(".") || !output.open(QIODevice::WriteOnly) || !decoded.save(&output,"PNG") || !output.commit())
+            return uiText("Could not save the background.");
+        QUrl url=QUrl::fromLocalFile(path);
+        url.setQuery(QString::number(++backgroundRevision));
+        backgrounds.insert(section,url);
+    }
+    emit sectionBackgroundsChanged();
+    return {};
+}
+
 Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),library(storage.library),gamesRoot(storage.games),emulation(r){
+    for(const auto &section:backgroundSections){
+        const QString path=root+"/config/backgrounds/"+section+".png";
+        if(QFileInfo(path).isFile())backgrounds.insert(section,QUrl::fromLocalFile(path));
+    }
     connect(this,&Backend::storageChanged,this,&Backend::settingsChanged);
+    scummLibrary=new ScummLibrary(root,this);
+    atariLibrary=new AtariLibrary(root,this);
+    arcadeLibrary=new ArcadeLibrary(root,this);
+    runtimeManager=new Runtimes(root,this);
+    runtimeManager->blocked=[this]{return active || atariLibrary->busy() || scummLibrary->busy() || arcadeLibrary->busy();};
+    connect(runtimeManager,&Runtimes::changed,this,&Backend::statusChanged);
+    connect(runtimeManager,&Runtimes::installed,this,[this]{emit scummLibrary->changed();emit atariLibrary->changed();});
+    scummLibrary->blocked=[this]{return active || atariLibrary->busy() || runtimeManager->busy() || arcadeLibrary->busy();};
+    atariLibrary->blocked=[this]{return active || scummLibrary->busy() || runtimeManager->busy() || arcadeLibrary->busy();};
+    arcadeLibrary->blocked=[this]{return active || atariLibrary->busy() || scummLibrary->busy() || runtimeManager->busy();};
+    arcadeLibrary->monitor=[this]{
+        const auto wanted=emulation.data["global"].toObject()["monitor"].toString();
+        if(wanted.isEmpty())return QVariantMap{};
+        const auto screens=Displays::available("x11");
+        const auto nativeScreens=arcadeLibrary->settings()["fullscreen"].toBool()&&!qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")?Displays::available("wayland"):QVariantList{};
+        // Usar Wayland nativo evita que MAME cambie de monitor al entrar en pantalla completa.
+        for(const auto &entry:screens)if(entry.toMap()["id"].toString()==wanted)return Displays::forNativeSdl(entry.toMap(),nativeScreens);
+        refreshMonitors();const auto selected=Displays::resolve(wanted,monitorData);
+        // Convertir la pantalla seleccionada por geometría cuando Wayland usa otro nombre.
+        for(const auto &entry:screens){const auto candidate=entry.toMap();
+            if(candidate["x"]==selected["x"]&&candidate["y"]==selected["y"]&&candidate["width"]==selected["width"]&&candidate["height"]==selected["height"])return Displays::forNativeSdl(candidate,nativeScreens);
+        }
+        if(!screens.isEmpty())return Displays::forNativeSdl(screens.first().toMap(),nativeScreens);
+        auto result=selected;if(!result.isEmpty())result["driver"]="wayland";return result;
+    };
+    connect(arcadeLibrary,&ArcadeLibrary::changed,this,&Backend::statusChanged);
+    atariLibrary->monitor=[this]{
+        refreshMonitors();
+        const auto screen=Displays::resolve(emulation.data["global"].toObject()["monitor"].toString(),monitorData);
+        const auto nativeScreens=!screen.isEmpty()&&!qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")?Displays::available("wayland"):QVariantList{};
+        return Displays::forNativeSdl(screen,nativeScreens);
+    };
+    connect(atariLibrary,&AtariLibrary::changed,this,&Backend::statusChanged);
+    connect(scummLibrary,&ScummLibrary::changed,this,&Backend::statusChanged);
+    connect(scummLibrary,&ScummLibrary::manualReady,this,[this](QUrl url,const QString &title){emit extraReady(url,title,true);});
     QDir().mkpath(root+"/data");
     loadCatalog();
     database=QSqlDatabase::addDatabase("QSQLITE","vetust-native");database.setDatabaseName(root+"/data/personal.sqlite");if(!database.open())fail(database.lastError().text());
@@ -72,14 +142,17 @@ Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),l
     selectedId="67bdc1a5-86ff-4cc8-a8e1-293a97de6e95";rebuildHome();refresh();
 }
 void Backend::loadCatalog(){
-    extras.load(library);
-    magazines.load(library);
+    atariLibrary->setLibrary(library,storage.metadataDirectory("atari2600"));
+    arcadeLibrary->setLibrary(library,storage.metadataDirectory("mame"));
+    scummLibrary->setLibrary(library,storage.data["scummvm"].toString(),storage.metadataDirectory("scummvm"));
+    extras.load(library,storage.metadataRoot(),storage.metadataDirectory("dosbox"),storage.organized()?QFileInfo(storage.dosboxPath("archives")).absolutePath():QString());
+    magazines.load(library,storage.data["magazines"].toString());
     games.clear();indexes.clear();searches.clear();genreList.clear();spanishProfiles={};
     auto catalog=QFileInfo::exists(root+"/data/catalog.json")?readJson(root+"/data/catalog.json"):QJsonObject{};assetMap=catalog["assets"].toObject();profiles=QFileInfo::exists(root+"/data/original-profiles.json")?readJson(root+"/data/original-profiles.json"):QJsonObject{};
     if(QFileInfo::exists(root+"/data/spanish-profiles.json"))spanishProfiles=readJson(root+"/data/spanish-profiles.json");
     // La biblioteca es la fuente de sus perfiles; los datos locales permiten usar juegos ya instalados sin el disco.
-    if(QFileInfo::exists(library+"/Personalizaciones/perfiles.zip")){
-        Archive custom(library+"/Personalizaciones/perfiles.zip");
+    if(QFileInfo::exists(storage.sharedPath("metadata/dosbox/perfiles.zip","Personalizaciones/perfiles.zip"))){
+        Archive custom(storage.sharedPath("metadata/dosbox/perfiles.zip","Personalizaciones/perfiles.zip"));
         auto document=[&](const QString &name){auto doc=QJsonDocument::fromJson(custom.read(name));if(!doc.isObject())fail(uiText("Invalid custom metadata: ")+name);return doc.object();};
         catalog=document("catalog.json");assetMap=catalog["assets"].toObject();
         profiles=document("original-profiles.json");spanishProfiles=document("spanish-profiles.json");
@@ -115,6 +188,51 @@ QVariantMap Backend::publicGame(const QJsonObject &g) const{
 }
 QVariantMap Backend::selected() const{return indexes.contains(selectedId)?publicGame(games[indexes[selectedId]]):QVariantMap{};}
 QVariantList Backend::pageGames() const{QVariantList list;for(int i=currentPage*PageSize;i<qMin((currentPage+1)*PageSize,int(filtered.size()));i++)list<<publicGame(games[filtered[i]]);return list;}
+QVariantMap Backend::unifiedCatalog(const QString &query,const QString &engine,int page,const QString &genre,bool verified) const{
+    QVariantList entries;const auto match=fold(query);
+    auto append=[&](const QString &motor,const QString &id,const QVariantMap &game,const QString &cover,const QString &search){
+        if(!match.isEmpty()&&!fold(search).contains(match))return;
+        entries<<QVariantMap{{"key",motor+":"+id},{"engine",motor},{"id",id},{"title",game["title"]},{"cover",cover},{"year",game["year"]},{"developer",game.value("developer",game.value("manufacturer"))}};
+    };
+    if(engine.isEmpty()||engine=="dosbox")for(const auto &g:games){
+        const auto id=g["id"].toString();
+        if(!match.isEmpty()&&!searches.value(id).contains(match))continue;
+        if(engine=="dosbox"&&!genre.isEmpty()&&!g["genre"].toString().split(';').contains(genre))continue;
+        if(engine=="dosbox"&&verified&&!publicGame(g).value("tested").toBool())continue;
+        const auto cover=g["cover"].toString();
+        append("dosbox",id,g.toVariantMap(),cover.isEmpty()?QString():"image://art/"+cover,searches.value(id));
+    }
+    if(engine.isEmpty()||engine=="scummvm")for(const auto &value:scummLibrary->games()){
+        const auto game=value.toMap();if(game["hidden"].toBool())continue;
+        auto cover=game["cover"].toString();
+        if(cover.isEmpty()){const auto art=scummArtwork(game["gameId"].toString())["cover"].toString();if(!art.isEmpty())cover="image://art/"+art;}
+        append("scummvm",game["folder"].toString(),game,cover,game["title"].toString()+" "+game["folder"].toString());
+    }
+    for(const auto &motor:{QString("atari"),QString("arcade")}){
+        if(!engine.isEmpty()&&engine!=motor)continue;
+        const auto source=motor=="atari"?atariLibrary->games():arcadeLibrary->games();
+        for(const auto &value:source){
+            const auto game=value.toMap();if(game["hidden"].toBool())continue;
+            QString search=game["title"].toString();bool playable=motor=="atari";
+            for(const auto &v:game["variants"].toList()){
+                const auto variant=v.toMap();search+=' '+variant["title"].toString()+' '+variant["id"].toString()+' '+variant["manufacturer"].toString();
+                if(variant["playable"].toBool()&&variant["status"].toString()!="preliminary")playable=true;
+            }
+            if(!playable)continue;
+            auto card=game;const auto selected=game["selected"].toMap();
+            if(card["year"].toString().isEmpty())card["year"]=selected["year"];
+            if(card["manufacturer"].toString().isEmpty())card["manufacturer"]=selected["manufacturer"];
+            const auto cover=game["cover"].toString();
+            append(motor,game["id"].toString(),card,cover.isEmpty()&&motor=="arcade"?game["image"].toString():cover,search);
+        }
+    }
+    std::sort(entries.begin(),entries.end(),[](const QVariant &a,const QVariant &b){
+        const auto left=a.toMap(),right=b.toMap();const int order=QString::localeAwareCompare(left["title"].toString(),right["title"].toString());
+        return order==0?left["key"].toString()<right["key"].toString():order<0;
+    });
+    const int count=entries.size(),pages=qMax(1,(count+PageSize-1)/PageSize),current=qBound(0,page,pages-1);
+    return {{"games",entries.mid(current*PageSize,PageSize)},{"count",count},{"pages",pages},{"page",current}};
+}
 void Backend::refresh(){
     filtered.clear();const QString match=fold(query);
     QHash<int,int> collectionRank;const auto members=collections.value(collectionKey);
@@ -146,7 +264,7 @@ void Backend::notify(const QString &text,int value){message=text;percent=value;e
 void Backend::dismissStatus(){if(!active)notify("");}
 void Backend::openLog(){QString id=process.property("logId").toString();if(id.isEmpty())id=selectedId+(spanishProfiles.contains(selectedId)&&spanishPreference.value(selectedId,true)?"-es":"");const QString path=root+"/logs/"+id+"-native.log";if(QFileInfo::exists(path))QDesktopServices::openUrl(QUrl::fromLocalFile(path));else notify(uiText("This game does not have a native execution log yet."));}
 void Backend::openExtra(int index){
-    if(active)return;
+    if(busy())return;
     active=true;notify(uiText("Opening extra…"));
     const auto source=extras;const QString id=selectedId,cache=root+"/cache/extras";
     auto watcher=new QFutureWatcher<QPair<QString,QString>>(this);
@@ -162,8 +280,30 @@ void Backend::openExtra(int index){
     }));
 }
 void Backend::openManual(){
-    try{const QString name=games[indexes[selectedId]]["manual"].toString();if(name.isEmpty())return;QString path=root+"/data/manuals/"+selectedId+".pdf";QDir().mkpath(QFileInfo(path).absolutePath());if(!QFileInfo::exists(path)){Archive zip(library+"/Content/XODOSMetadata.zip");writeNew(path,zip.read(name));}emit manualReady(QUrl::fromLocalFile(path));}
+    try{const QString name=games[indexes[selectedId]]["manual"].toString();if(name.isEmpty())return;QString path=root+"/data/manuals/"+selectedId+".pdf";QDir().mkpath(QFileInfo(path).absolutePath());if(!QFileInfo::exists(path)){Archive zip(storage.sharedPath("metadata/dosbox/recursos.zip","Content/XODOSMetadata.zip"));writeNew(path,zip.read(name));}emit manualReady(QUrl::fromLocalFile(path));}
     catch(const std::exception &e){notify(QString::fromUtf8(e.what()));}
+}
+static QString stagingSoundConfig(const QJsonObject &audio,const QString &folder,const QString &original,const Storage &storage){
+    // El menú alternativo corresponde a una versión concreta del BAT instalado.
+    const QString menu=audio["menu"].toString();
+    QString config=audio["config"].toString();
+    if(menu.isEmpty() || config.isEmpty() || !QDir::isRelativePath(menu) || menu.split('/').contains(".."))
+        return original;
+    const QString base=QFileInfo(folder).canonicalFilePath();
+    const QString path=QFileInfo(QDir(folder).filePath(menu)).canonicalFilePath();
+    QFile file(path);
+    if(base.isEmpty() || !path.startsWith(base+'/') || file.size()>128*1024 || !file.open(QIODevice::ReadOnly))
+        return original;
+    const auto hash=QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256).toHex();
+    if(hash!=audio["sha256"].toString().toLatin1())return original;
+    // Algunas aventuras importan personajes desde otras entregas ya instaladas.
+    for(const auto &value:audio["optionalMounts"].toArray()){
+        const auto entry=value.toObject();
+        const QString line=entry["line"].toString();
+        if(!line.isEmpty() && !QFileInfo(storage.expand(entry["directory"].toString())).isDir())
+            config.remove(line);
+    }
+    return config;
 }
 QString Backend::makeConfig(const QJsonObject &game,const QJsonObject &profile,const QString &folder,const QString &environment,const QString &engine,const QJsonObject &options,bool console,const QString &fileManager){
     const QString id=game["id"].toString();const QString legacy=root+"/config/legacy-profiles/"+id+".conf";
@@ -172,6 +312,8 @@ QString Backend::makeConfig(const QJsonObject &game,const QJsonObject &profile,c
     const bool preserved=profile["tested"].toBool()&&QFileInfo::exists(old);
     QString source=profile["config"].toString();
     if(preserved){QFile f(old);if(!f.open(QIODevice::ReadOnly))fail(uiText("Cannot read the verified profile."));source=QString::fromUtf8(f.readAll());}
+    if(engine=="staging" && !console && !preserved)
+        source=stagingSoundConfig(profile["stagingAudio"].toObject(),folder,source,storage);
     source=storage.expand(source);
     QString result,section;bool autoexec=false;
     for(QString line:source.split('\n')){
@@ -194,6 +336,7 @@ QString Backend::makeConfig(const QJsonObject &game,const QJsonObject &profile,c
             QString token=it->captured(),clean=token;clean.remove('"');clean.replace('\\','/');
             if(clean.contains("eXoDOS/",Qt::CaseInsensitive)||clean.compare("./eXoDOS",Qt::CaseInsensitive)==0){
                 int pos=clean.indexOf("eXoDOS",0,Qt::CaseInsensitive);QString relative=clean.mid(pos);
+                if(storage.organized())relative.replace(0,6,"games");
                 if(relative.split('/').contains(".."))fail(uiText("Unexpected mount path."));
                 QString translated=resolveCase(environment+'/'+relative);
                 if(!QFileInfo::exists(translated))fail(uiText("A file required by the profile is missing: ")+relative);
@@ -207,8 +350,8 @@ QString Backend::makeConfig(const QJsonObject &game,const QJsonObject &profile,c
         result+=line+'\n';
     }
     // Staging necesita sus secciones de sintetizadores para los perfiles MT-32 y MIDI.
-    if(engine=="staging")result+="\n[mt32]\nromdir="+library+"/eXo/mt32\n[fluidsynth]\nsoundfont="+library+"/eXo/mt32/SoundCanvas.sf2\n";
-    if(engine=="dosbox-x")result=EmulationSettings::apply(result,{{"midi.mt32.romdir",library+"/eXo/mt32"},{"midi.fluid.soundfont",library+"/eXo/mt32/SoundCanvas.sf2"}});
+    if(engine=="staging")result+="\n[mt32]\nromdir="+storage.sharedPath("resources/audio/roland-mt32","eXo/mt32")+"\n[fluidsynth]\nsoundfont="+storage.sharedPath("resources/audio/soundfonts/SoundCanvas.sf2","eXo/mt32/SoundCanvas.sf2")+"\n";
+    if(engine=="dosbox-x")result=EmulationSettings::apply(result,{{"midi.mt32.romdir",storage.sharedPath("resources/audio/roland-mt32","eXo/mt32")},{"midi.fluid.soundfont",storage.sharedPath("resources/audio/soundfonts/SoundCanvas.sf2","eXo/mt32/SoundCanvas.sf2")}});
     result=EmulationSettings::configured(result,options,engine);
     if(console)result=EmulationSettings::consoleConfig(result,folder,xTreeAvailable()?root+"/runtime/dos-tools/xtgold":QString(),fileManager,nortonAvailable()?root+"/runtime/dos-tools/norton":QString());
     const QString digest=QString::fromLatin1(QCryptographicHash::hash(result.toUtf8(),QCryptographicHash::Sha256).toHex().left(16));
@@ -224,14 +367,14 @@ void Backend::restorePrepared(const QJsonObject &profile,const QString &readyPat
     if(QFileInfo::exists(target))fail(uiText("This edition has files but no complete installation. Keep them and check the folder before restoring it."));
     QTemporaryDir temporary(gamesRoot+"/.vetust-"+name+"-XXXXXX");
     if(!temporary.isValid())fail(uiText("Cannot prepare the playable copy."));
-    Archive archive(library+"/Personalizaciones/juegos.zip");
+    Archive archive(storage.dosboxPath("versiones-especiales.zip"));
     const QString extracted=archive.extract(temporary.path(),name,callback,true);
     const QString extractedPath=temporary.path()+'/'+extracted;
     if(!QFileInfo::exists(extractedPath+readyPath.mid(target.size())))fail(uiText("The library edition is incomplete."));
     if(!QDir().rename(extractedPath,target))fail(uiText("Could not finish restoring the game."));
 }
 void Backend::restoreTools(){
-    const QString archive=library+"/Personalizaciones/herramientas.zip";
+    const QString archive=storage.sharedPath("resources/dos/herramientas.zip","Personalizaciones/herramientas.zip");
     if(!QFileInfo::exists(archive))return;
     const QString destination=root+"/runtime/dos-tools";
     if(!QDir().mkpath(destination))fail(uiText("Cannot prepare the DOS tools folder."));
@@ -258,36 +401,63 @@ LaunchPlan Backend::prepare(const QJsonObject &game,const QJsonObject &profile,c
         QString id=game["id"].toString(),folderName=game["folder"].toString(),target=gamesRoot+"/"+id;
         restorePrepared(profile,target+"/.ready",callback);
         if(!QFileInfo::exists(target+"/.ready")){
-            if(library.isEmpty()||!QFileInfo(library+"/eXo/eXoDOS").isDir())fail(uiText("The original collection is unavailable. Connect the drive or check Library and folders."));
+            if(storage.dosboxPath("archives").isEmpty()||!QFileInfo(storage.dosboxPath("archives")).isDir())fail(uiText("The original collection is unavailable. Connect the drive or check Library and folders."));
             const QString partial=target+".native-partial";
             if(QFileInfo::exists(partial))QDir(partial).removeRecursively();
             try{
-                Archive zip(library+"/eXo/eXoDOS/"+profile["archive"].toString());QString extracted=zip.extract(partial,folderName,callback);
+                Archive zip(storage.dosboxPath("archives")+"/"+profile["archive"].toString());QString extracted=zip.extract(partial,folderName,callback);
                 if(extracted!=folderName&&!QDir().rename(partial+'/'+extracted,partial+'/'+folderName))fail(uiText("Could not normalize the game folder."));
                 if(QFileInfo::exists(target))fail(uiText("An incomplete installation needs to be checked before continuing."));
                 writeNew(partial+"/.ready",{});if(!QDir().rename(partial,target))fail(uiText("Could not finish the installation."));
             }catch(...){QDir(partial).removeRecursively();throw;}
         }
-        const QString folder=target+'/'+folderName,environment=root+"/cache/environments/"+id;QDir().mkpath(environment+"/eXoDOS");
-        const QString link=environment+"/eXoDOS/"+folderName;
+        const QString folder=target+'/'+folderName,environment=root+"/cache/environments/"+id;const QString mountRoot=environment+(storage.organized()?"/games":"/eXoDOS");QDir().mkpath(mountRoot);
+        const QString link=mountRoot+"/"+folderName;
         if(QFileInfo(link).isSymLink()&&QFileInfo(link).symLinkTarget()!=folder)QFile::remove(link);
         if(!QFileInfo::exists(link)&&!QFile::link(folder,link))fail(uiText("Could not prepare the game environment."));
         // Las ROM y fuentes se consultan en lectura; solo el juego se monta con escritura.
         for(const QString &resource:QStringList{"mt32"}){
-            const QString link=environment+'/'+resource,target=library+"/eXo/"+resource;
+            const QString link=environment+'/'+resource,target=storage.sharedPath("resources/audio/roland-mt32","eXo/"+resource);
             if(QFileInfo(link).isSymLink()&&QFileInfo(link).symLinkTarget()!=target)QFile::remove(link);
-            if(!library.isEmpty()&&QFileInfo::exists(target)&&!QFileInfo::exists(link))QFile::link(target,link);
+            if(!target.isEmpty()&&QFileInfo::exists(target)&&!QFileInfo::exists(link))QFile::link(target,link);
         }
         plan.config=makeConfig(game,profile,folder,environment,engine,options,console,fileManager);plan.directory=environment;
     }catch(const std::exception &e){plan.error=QString::fromUtf8(e.what());}
     return plan;
 }
 void Backend::play(){launch(false);}
-bool Backend::xTreeAvailable() const{return QFileInfo::exists(library+"/Personalizaciones/herramientas.zip")||QFileInfo::exists(root+"/runtime/dos-tools/xtgold/xtgold.com")&&QFileInfo::exists(root+"/runtime/dos-tools/xtgold/xtg.exe")&&QFileInfo::exists(root+"/runtime/dos-tools/xtgold/XTREE.BAT");}
-bool Backend::nortonAvailable() const{return QFileInfo::exists(library+"/Personalizaciones/herramientas.zip")||QFileInfo::exists(root+"/runtime/dos-tools/norton/NC.EXE")&&QFileInfo::exists(root+"/runtime/dos-tools/norton/NCMAIN.EXE");}
+void Backend::openGameFolder(){
+    if(busy()||!indexes.contains(selectedId))return;
+    auto game=games[indexes[selectedId]],profile=profiles[selectedId].toObject();
+    if(spanishProfiles.contains(selectedId)&&spanishPreference.value(selectedId,true)){
+        profile=spanishProfiles[selectedId].toObject();game["id"]=selectedId+"-es";
+    }
+    const QString directory=profile.contains("editionDirectory")
+        ?storage.expand(profile["editionDirectory"].toString())
+        :gamesRoot+'/'+game["id"].toString()+'/'+game["folder"].toString();
+    auto open=[this,directory]{
+        if(!QFileInfo(directory).isDir()||!QDesktopServices::openUrl(QUrl::fromLocalFile(directory)))
+            notify(uiText("Could not open the game folder."));
+        else notify(uiText("Game folder opened."));
+    };
+    if(QFileInfo(directory).isDir()){open();return;}
+    if(profile["config"].toString().isEmpty()||(profile["archive"].toString().isEmpty()&&!profile.contains("editionDirectory"))){notify(uiText("No configuration or ZIP is available for this game."));return;}
+    const QString engine=emulation.engine(selectedId);
+    const QJsonObject options=emulation.overrides(selectedId,engine);
+    active=true;notify(uiText("Preparing ")+game["title"].toString(),0);
+    auto watcher=new QFutureWatcher<LaunchPlan>(this);
+    connect(watcher,&QFutureWatcher<LaunchPlan>::finished,this,[this,watcher,open]{
+        const auto plan=watcher->result();watcher->deleteLater();active=false;
+        if(!plan.error.isEmpty()){notify(plan.error);return;}
+        open();
+    });
+    watcher->setFuture(QtConcurrent::run([this,game,profile,engine,options]{return prepare(game,profile,engine,options,[this](int n){QMetaObject::invokeMethod(this,[this,n]{percent=n;emit statusChanged();},Qt::QueuedConnection);});}));
+}
+bool Backend::xTreeAvailable() const{return QFileInfo::exists(storage.sharedPath("resources/dos/herramientas.zip","Personalizaciones/herramientas.zip"))||QFileInfo::exists(root+"/runtime/dos-tools/xtgold/xtgold.com")&&QFileInfo::exists(root+"/runtime/dos-tools/xtgold/xtg.exe")&&QFileInfo::exists(root+"/runtime/dos-tools/xtgold/XTREE.BAT");}
+bool Backend::nortonAvailable() const{return QFileInfo::exists(storage.sharedPath("resources/dos/herramientas.zip","Personalizaciones/herramientas.zip"))||QFileInfo::exists(root+"/runtime/dos-tools/norton/NC.EXE")&&QFileInfo::exists(root+"/runtime/dos-tools/norton/NCMAIN.EXE");}
 void Backend::openConsole(const QString &fileManager){launch(true,fileManager);}
 void Backend::launch(bool console,const QString &fileManager){
-    if(active||!indexes.contains(selectedId))return;
+    if(busy()||!indexes.contains(selectedId))return;
     if(fileManager=="xtree"&&!xTreeAvailable()){notify(uiText("XTree Gold is not installed in VETUSTware."));return;}
     if(fileManager=="norton"&&!nortonAvailable()){notify(uiText("Norton Commander is not installed in VETUSTware."));return;}
     if(!fileManager.isEmpty()&&fileManager!="xtree"&&fileManager!="norton"){notify(uiText("Unknown DOS file manager."));return;}
@@ -334,16 +504,91 @@ QString Backend::diagnostics() const{
 }
 
 QVariantMap Backend::storageSettings() const{
-    const bool sourceAvailable=!library.isEmpty()&&QFileInfo(library+"/Content/XODOSMetadata.zip").isFile();
+    const bool sourceAvailable=QFileInfo(storage.sharedPath("metadata/dosbox/recursos.zip","Content/XODOSMetadata.zip")).isFile();
     const bool gamesAvailable=!gamesRoot.isEmpty()&&QFileInfo(gamesRoot).isDir();
-    return {{"library",library},{"games",gamesRoot},{"needsSetup",library.isEmpty()||gamesRoot.isEmpty()},
+    return {{"library",library},{"metadata",storage.metadataRoot()},{"legacyLayout",!storage.organized()&&!library.isEmpty()},{"games",gamesRoot},{"scummvm",storage.data["scummvm"].toString()},{"dosbox",storage.data["dosbox"].toString()},{"magazines",storage.data["magazines"].toString()},{"personal",root+"/data"},{"needsSetup",(library.isEmpty()&&storage.metadataRoot().isEmpty()&&!storage.data["embeddedMetadata"].toBool())||gamesRoot.isEmpty()},
         {"status",sourceAvailable&&gamesAvailable?uiText("Library available"):!gamesAvailable?uiText("Games are unavailable: connect the drive or check the folders."):uiText("The original collection is unavailable. Installed games and cached covers are preserved.")}};
 }
-QString Backend::saveStorage(const QUrl &source,const QUrl &installed){
-    if(active)return uiText("Wait for the current session to finish.");
+QVariantList Backend::inspectLibraries(const QString &lib,const QVariantMap &locations) const{
+    QVariantList rows;
+    for(const QString key:{"dosbox","scummvm","atari2600","mame","magazines"}){
+        QString fallback;
+        if(!lib.isEmpty()){
+            if(key=="dosbox")fallback=LibraryLayout::organized(lib)?LibraryLayout::games(lib,key):LibraryLayout::path(lib,"games/dosbox","eXo");
+            else if(key=="magazines")fallback=LibraryLayout::path(lib,"magazines","Revistas");
+            else fallback=LibraryLayout::games(lib,key);
+        }
+        const auto custom=locations.value(key).toString(),path=custom.isEmpty()?fallback:custom;
+        bool available=!path.isEmpty()&&QFileInfo(path).isDir();
+        if(key=="dosbox")available=available&&QFileInfo(path+(custom.isEmpty()&&!LibraryLayout::organized(lib)?"/eXoDOS":"/archives")).isDir();
+        if(key=="mame")available=available&&QFileInfo(path+"/roms").isDir();
+        if(key=="magazines"){
+            Magazines candidate;candidate.load(lib,path);
+            available=available&&candidate.error().isEmpty()&&!candidate.series().isEmpty();
+        }
+        rows<<QVariantMap{{"key",key},{"path",path},{"available",available},{"automatic",custom.isEmpty()}};
+    }
+    return rows;
+}
+QString Backend::saveStorage(const QUrl &source,const QUrl &installed,const QUrl &scummvm,const QVariantMap &locations){
+    if(busy())return uiText("Wait for the current session to finish.");
     const QString lib=source.toLocalFile(),target=installed.toLocalFile();
+    const QString scummPath=scummvm.toLocalFile();
+    if(!scummvm.isEmpty()&&!scummvm.isLocalFile())return uiText("Select a local ScummVM games folder.");
+    if(scummPath!=storage.data["scummvm"].toString()&&!scummPath.isEmpty()&&(!QDir::isAbsolutePath(scummPath)||scummPath.contains('\n')||scummPath.contains('\r')||!QFileInfo(scummPath).isDir()))
+        return uiText("The ScummVM games folder is unavailable.");
+    QJsonObject chosen=QJsonObject::fromVariantMap(locations);
+    for(const QString key:{"dosbox","magazines","atari2600","mame","metadata","resources"}){
+        if(!chosen.contains(key))continue;
+        auto value=chosen[key].toString();
+        const auto old=(key=="atari2600"?atariLibrary->settings()["folder"].toString():key=="mame"?arcadeLibrary->settings()["folder"].toString():storage.data[key].toString());
+        if(!value.isEmpty()){
+            value=QDir::cleanPath(value);chosen[key]=value;
+            if(value!=old && (!QDir::isAbsolutePath(value)||value.contains('"')||value.contains('\n')||value.contains('\r')||!QFileInfo(value).isDir()))
+                return uiText("The folder is unavailable: ")+value;
+            if(value!=old&&key=="dosbox"&&!QFileInfo(value+"/archives").isDir())return uiText("Select a DOSBox folder containing archives.");
+            if(value!=old&&key=="mame"&&!QFileInfo(value+"/roms").isDir())return uiText("Select a MAME library containing a roms folder.");
+            if(value!=old&&key=="metadata"&&!QFileInfo(value+"/dosbox").isDir()&&!QFileInfo(value+"/scummvm").isDir()&&!QFileInfo(value+"/atari2600").isDir()&&!QFileInfo(value+"/mame").isDir())
+                return uiText("Select the metadata folder containing engine catalogs.");
+            if(value!=old&&(key=="metadata"||key=="dosbox")){
+                try{
+                    const auto profiles=value+(key=="metadata"?"/dosbox/perfiles.zip":"/metadata/perfiles.zip");
+                    if(QFileInfo(profiles).isFile()){
+                        Archive archive(profiles);
+                        for(const QString name:{"catalog.json","original-profiles.json","spanish-profiles.json"})
+                            if(!QJsonDocument::fromJson(archive.read(name)).isObject())return uiText("Invalid custom metadata: ")+name;
+                    }
+                    Extras candidate;candidate.load(QString(),key=="metadata"?value:QString(),key=="dosbox"?value+"/metadata":QString());
+                }catch(const std::exception &e){return QString::fromUtf8(e.what());}
+            }
+            if(value!=old&&key=="resources"&&!QFileInfo(value+"/audio").isDir()&&!QFileInfo(value+"/dos").isDir()&&!QFileInfo(value+"/mame").isDir())
+                return uiText("Select the resources folder containing audio or emulator resources.");
+            if(value!=old&&key=="magazines"){
+                Magazines candidate;candidate.load(lib,value);
+                if(!candidate.error().isEmpty()||candidate.series().isEmpty())return uiText("Select a magazines folder containing a valid revistas.json.");
+            }
+        }
+    }
+    // La ubicación de ScummVM puede cambiarse aunque el disco de juegos DOS esté desconectado.
+    if(lib==library&&target==gamesRoot&&!chosen.contains("metadata")&&!chosen["embeddedMetadata"].toBool()&&!chosen.contains("resources")){
+        const bool rescan=scummPath!=storage.data["scummvm"].toString();
+        const auto error=storage.save(lib,target,scummPath,chosen);if(!error.isEmpty())return error;
+        storage=Storage(root);atariLibrary->setLibrary(library,storage.metadataDirectory("atari2600"));arcadeLibrary->setLibrary(library,storage.metadataDirectory("mame"));magazines.load(library,storage.data["magazines"].toString());scummLibrary->setLibrary(library,storage.data["scummvm"].toString(),storage.metadataDirectory("scummvm"));
+        emit storageChanged();notify(uiText("Library and folders saved"));
+        if(rescan)scummLibrary->scan();return {};
+    }
     if(target==root+"/data/games"&&!QDir().mkpath(target))return uiText("Cannot create the games folder.");
-    auto error=Storage::validate(lib,target);if(!error.isEmpty())return error;
+    if(chosen.contains("metadata")||chosen["embeddedMetadata"].toBool()){
+        if(!QDir::isAbsolutePath(target)||target.contains('"')||target.contains('\n')||target.contains('\r')||!QFileInfo(target).isDir())return uiText("The folder is unavailable: ")+target;
+        const auto canonical=QFileInfo(target).canonicalFilePath();
+        for(auto it=chosen.begin();it!=chosen.end();++it){
+            const auto source=QFileInfo(it.value().toString()).canonicalFilePath();
+            if(!source.isEmpty()&&(canonical==source||canonical.startsWith(source+'/')))return uiText("Installed games must be outside the original collection.");
+        }
+        QTemporaryFile probe(target+"/.vetust-write-XXXXXX");if(!probe.open())return uiText("Cannot write to the installed games folder.");
+    }else{
+        const auto error=Storage::validate(lib,target,chosen.contains("dosbox")?chosen["dosbox"].toString():storage.data["dosbox"].toString());if(!error.isEmpty())return error;
+    }
     // Cambiar de carpeta conserva los datos. El traslado físico se hace por separado.
     if(!gamesRoot.isEmpty()&&target!=gamesRoot){
         for(const auto &name:QDir(gamesRoot).entryList(QDir::Dirs|QDir::NoDotAndDotDot)){
@@ -363,16 +608,21 @@ QString Backend::saveStorage(const QUrl &source,const QUrl &installed){
         const QString error=watcher->result();watcher->deleteLater();active=false;
         if(!error.isEmpty()){notify(error);return;}
         storage=Storage(root);library=storage.library;gamesRoot=storage.games;
-        try{loadCatalog();if(!indexes.contains(selectedId))selectedId=games.isEmpty()?QString():games.first()["id"].toString();rebuildHome();refresh();emit selectionChanged();emit storageChanged();notify(uiText("Library and folders saved"));}
+        try{loadCatalog();if(!indexes.contains(selectedId))selectedId=games.isEmpty()?QString():games.first()["id"].toString();rebuildHome();refresh();emit selectionChanged();emit storageChanged();notify(uiText("Library and folders saved"));scummLibrary->scan();}
         catch(const std::exception &e){notify(QString::fromUtf8(e.what()));}
     });
-    watcher->setFuture(QtConcurrent::run([this,lib,target]{
+    watcher->setFuture(QtConcurrent::run([this,lib,target,scummPath,chosen]{
         // Los catálogos personales existentes se mantienen al localizar de nuevo la colección.
-        if(games.isEmpty()){
-            QProcess importer;importer.start("python3",{root+"/helpers/import_library.py","--library",lib,"--data",root+"/data"});
+        const auto dosMetadata=chosen["embeddedMetadata"].toBool()?chosen["dosbox"].toString()+"/metadata":chosen.contains("metadata")?chosen["metadata"].toString()+"/dosbox":storage.metadataDirectory("dosbox");
+        if(games.isEmpty()&&(QFileInfo(dosMetadata+"/perfiles.zip").isFile()||QFileInfo(dosMetadata+"/recursos.zip").isFile()||!lib.isEmpty())){
+            QStringList args{root+"/helpers/import_library.py","--library",lib,"--data",root+"/data"};
+            const auto dosbox=chosen.contains("dosbox")?chosen["dosbox"].toString():storage.data["dosbox"].toString();
+            if(!dosbox.isEmpty())args<<"--dosbox"<<dosbox;
+            if(!dosMetadata.isEmpty())args<<"--dosbox-metadata"<<dosMetadata;
+            QProcess importer;importer.start("python3",args);
             if(!importer.waitForStarted()||!importer.waitForFinished(-1)||importer.exitCode()!=0)return QString(uiText("Could not import the library: "))+QString::fromUtf8(importer.readAllStandardError());
         }
-        return storage.save(lib,target);
+        return storage.save(lib,target,scummPath,chosen);
     }));
     return {};
 }
@@ -408,7 +658,7 @@ QVariantMap Backend::inheritedSettings(bool global,const QString &engine) const{
     return result;
 }
 QString Backend::saveEmulatorSettings(bool global,const QString &id,const QVariantMap &scope,const QVariantMap &paths){
-    if(active)return uiText("Wait for the game to finish before changing the settings.");
+    if(busy())return uiText("Wait for the game to finish before changing the settings.");
     if(!global&&!indexes.contains(id))return uiText("Unknown game.");
     QString error=emulation.save(global,id,QJsonObject::fromVariantMap(scope),QJsonObject::fromVariantMap(paths));
     if(error.isEmpty()){rebuildHome();refresh();emit selectionChanged();notify(global?uiText("Global settings saved"):uiText("Game settings saved"));}
@@ -416,7 +666,7 @@ QString Backend::saveEmulatorSettings(bool global,const QString &id,const QVaria
 }
 
 void Backend::setSpanish(bool enabled){
-    if(active||!spanishProfiles.contains(selectedId))return;
+    if(busy()||!spanishProfiles.contains(selectedId))return;
     QSqlQuery q(database);q.prepare("INSERT INTO editions(id,spanish) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET spanish=excluded.spanish");
     q.addBindValue(selectedId);q.addBindValue(enabled);
     if(!q.exec()){notify(uiText("Could not save the selected edition."));return;}
@@ -426,4 +676,21 @@ void Backend::setSpanish(bool enabled){
 void Backend::retranslate(){
     rebuildHome();refresh();emit selectionChanged();emit settingsChanged();
     if(!active)dismissStatus();
+}
+
+QVariantMap Backend::scummArtwork(const QString &gameId) const{
+    // Solo se reutiliza arte cuando la equivalencia con el catálogo es explícita.
+    static const QMap<QString,QString> titles={
+        {"monkey","The Secret of Monkey Island"},{"monkey2","Monkey Island 2: LeChuck's Revenge"},
+        {"indy3","Indiana Jones and the Last Crusade: The Graphic Adventure"},{"atlantis","Indiana Jones and the Fate of Atlantis"},
+        {"loom","Loom"},{"tentacle","Maniac Mansion: Day of the Tentacle"},{"maniac","Maniac Mansion"},
+        {"samnmax","Sam & Max Hit the Road"},{"dig","The Dig"},
+        {"lsl1sci","Leisure Suit Larry: In the Land of the Lounge Lizards (SCI Remake)"},
+        {"lsl5","Leisure Suit Larry 5: Passionate Patti Does a Little Undercover Work"},
+        {"lsl6","Leisure Suit Larry 6: Shape Up or Slip Out!"},{"lsl6hires","Leisure Suit Larry 6: Shape Up or Slip Out!"}
+    };
+    const auto title=titles.value(gameId);
+    if(title.isEmpty())return {};
+    for(const auto &game:games)if(game["title"].toString()==title)return game.toVariantMap();
+    return {};
 }

@@ -1,6 +1,7 @@
 # Translating VETUSTware
 
-The interface defaults to **English**. **Spanish** is included. Choose a language
+The interface defaults to **English**. **Spanish** and **Português (Brasil)**
+(`pt_BR`, Brazilian Portuguese) are included. Choose a language
 in **Settings → Interface language**; the change takes effect immediately and is
 saved in the installation's `config/interface.json`. This does not change game
 editions, emulation settings, saves, or the contents of the shared library.

@@ -7,8 +7,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
 pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 qt_standard_project_setup(REQUIRES 6.5)
-qt_add_executable(vetust i18n.cpp i18n.h main.cpp backend.cpp backend_magazines.cpp magazines.cpp magazines.h home.cpp backend.h displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
-qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES PdfReader.qml Main.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml)
+qt_add_executable(vetust i18n.cpp i18n.h main.cpp backend.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h home.cpp backend.h displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
+qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES PdfReader.qml Main.qml CatalogView.qml BackgroundsDialog.qml LibraryBackdrop.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml ScummView.qml AtariView.qml ArcadeView.qml RuntimesDialog.qml
+    RESOURCES assets/scummvm-header.png assets/atari2600-header.png assets/arcade-header.png assets/retro-library.jpg assets/magazines.jpg)
 target_link_libraries(vetust PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Sql Qt6::Concurrent Qt6::PdfQuick PkgConfig::LIBZIP PkgConfig::SDL2)
 
 
@@ -30,7 +31,7 @@ target_link_libraries(emulation_tests PRIVATE Qt6::Core PkgConfig::SDL2)
 add_test(NAME ajustes_emuladores COMMAND emulation_tests)
 
 find_package(Qt6 REQUIRED COMPONENTS Test)
-qt_add_executable(home_tests i18n.cpp i18n.h home_tests.cpp backend.cpp backend_magazines.cpp magazines.cpp magazines.h backend.h home.cpp displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
+qt_add_executable(home_tests i18n.cpp i18n.h home_tests.cpp backend.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h backend.h home.cpp displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
 target_link_libraries(home_tests PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Sql Qt6::Concurrent Qt6::PdfQuick Qt6::Test PkgConfig::LIBZIP PkgConfig::SDL2)
 target_compile_definitions(home_tests PRIVATE VETUST_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME portada_y_navegacion COMMAND home_tests)
@@ -42,3 +43,24 @@ target_compile_definitions(i18n_tests PRIVATE VETUST_TRANSLATIONS="${CMAKE_CURRE
 add_test(NAME idiomas COMMAND i18n_tests)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME catalogos_idiomas COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../helpers/check_translations.py)
+
+qt_add_executable(scummvm_tests scummvm_tests.cpp scummvm.cpp scummvm.h)
+target_link_libraries(scummvm_tests PRIVATE Qt6::Gui Qt6::Test)
+add_test(NAME biblioteca_scummvm COMMAND scummvm_tests)
+set_tests_properties(biblioteca_scummvm PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(atari_tests atari_tests.cpp atari.cpp atari.h)
+target_link_libraries(atari_tests PRIVATE Qt6::Gui Qt6::Test)
+add_test(NAME biblioteca_atari COMMAND atari_tests)
+set_tests_properties(biblioteca_atari PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_test(NAME indice_atari COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../helpers/atari_index_tests.py)
+
+add_test(NAME gestor_runtimes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../helpers/runtime_manager_tests.py)
+
+qt_add_executable(arcade_tests arcade_tests.cpp arcade.cpp arcade.h)
+target_link_libraries(arcade_tests PRIVATE Qt6::Gui Qt6::Test)
+add_test(NAME biblioteca_arcade COMMAND arcade_tests)
+set_tests_properties(biblioteca_arcade PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_test(NAME indice_y_partidas_arcade COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../helpers/mame_tests.py)
+
+add_test(NAME estructura_biblioteca COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../helpers/library_layout_tests.py)

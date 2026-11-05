@@ -18,7 +18,7 @@ It requires compatible system libraries; it is not a universal Linux package.
 See `BUILD_INFO.json` for the exact build environment.
 
 Install Qt 6 (Quick, QuickControls2, Sql with SQLite support, Concurrent,
-Pdf/PdfQuick and QML dialogs), libzip, SDL2 and Python 3 from your distribution.
+Pdf/PdfQuick, QML dialogs and QtQuick.Effects), libzip, SDL2 and Python 3 from your distribution.
 A Linux desktop with X11 or XWayland and OpenGL is required. Install DOSBox
 Staging, classic DOSBox or DOSBox-X separately.
 
@@ -114,3 +114,26 @@ copying the content; changing a path does not move files.
 Diagnostics contain local paths. Remove personal information before posting them.
 Distribute the clean release archive, not a used installation containing your data.
 See [THIRD_PARTY.md](THIRD_PARTY.md) for dependency and content licensing.
+
+## Atari 2600 with Stella (development version)
+
+Install Stella from your distribution: for example `sudo pacman -S stella`
+on Arch/CachyOS, or `sudo apt install stella` on Debian/Ubuntu.
+The integration has been tested with Stella 7.0 on Linux.
+
+Place ROMs (`.bin` or `.a26`) in `atari2600/roms` and images in
+`atari2600/snapshots` inside your library. Open **ATARI 2600**, then
+**Update catalog**. A portable `catalog.json` can also accompany this folder.
+Use **Atari settings** to choose another location. New preferences and saves
+are stored in `config/atari.json` and `data/stella` under the installation,
+not in the shared library. Back up these folders to retain your progress.
+
+Use **Manage in Stella**, or press **Tab** during a game, for controller
+mapping and individual game options. Stella 7 defaults: **F9** saves a state,
+**F10** selects the next slot, **F11** loads it. Old states from other Stella
+versions may be incompatible; preserved legacy files are not imported automatically.
+Close Stella as well as VETUSTware before updating the installation.
+
+## Private emulators
+
+Settings → Emulators and updates manages Stella and ScummVM inside the application folder. The first local importer supports Arch/CachyOS x86_64. Update packages must be published separately; see [runtime management](docs/RUNTIMES.md).

@@ -21,7 +21,7 @@ El paquete de fuentes permite compilar en el equipo destinatario.
 
 1. Instalar desde los repositorios de la distribución las dependencias:
    Qt 6 (Quick, QuickControls2, Sql con controlador SQLite, Concurrent,
-   Pdf/PdfQuick y diálogos QML), libzip, SDL2, Python 3. Se necesita un escritorio
+   Pdf/PdfQuick, diálogos QML y QtQuick.Effects), libzip, SDL2, Python 3. Se necesita un escritorio
    Linux con X11 o XWayland y OpenGL. El emulador se instala aparte.
 2. Extraer el archivo tar.gz en una carpeta temporal y abrir una terminal allí.
 3. Comprobar las bibliotecas e instalar:
@@ -208,3 +208,26 @@ página o de par. Los atajos funcionan con el visor abierto y se suspenden mient
 está desplegado el selector de vista. Cambiar el modo conserva la página elegida;
 cada documento empieza en su portada y el modo se mantiene durante la sesión.
 **X** o **Escape** cierran el visor.
+
+## Atari 2600 con Stella (versión en desarrollo)
+
+Instala Stella desde los repositorios: `sudo pacman -S stella` en Arch/CachyOS
+o `sudo apt install stella` en Debian/Ubuntu. La integración se comprobó con
+Stella 7.0 en Linux.
+
+Coloca ROMs `.bin` o `.a26` en `atari2600/roms` y las imágenes en
+`atari2600/snapshots`, dentro de la biblioteca. Abre **ATARI 2600 → Actualizar
+catálogo**. También puede acompañar a la carpeta un `catalog.json` portátil.
+La ubicación se cambia en **Ajustes de Atari**. Las preferencias y partidas
+nuevas quedan en `config/atari.json` y `data/stella` dentro de la instalación.
+Incluye ambas ubicaciones en tus respaldos.
+
+**Gestionar en Stella**, o **Tab** durante el juego, abre los ajustes de mandos
+y opciones individuales. En Stella 7: **F9** guarda estado, **F10** cambia de
+ranura y **F11** carga. Los estados de versiones antiguas pueden ser incompatibles;
+los archivos conservados no se importan automáticamente.
+Cierra también Stella antes de actualizar VETUSTware.
+
+## Emuladores propios
+
+Ajustes → Emuladores y actualizaciones permite gestionar Stella y ScummVM dentro de la carpeta de la aplicación. La primera importación local admite Arch/CachyOS x86_64. Los paquetes de actualización se publican por separado; consulta [la gestión de runtimes](docs/RUNTIMES.md).

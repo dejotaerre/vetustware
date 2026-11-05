@@ -8,7 +8,7 @@ Item {
     property bool doublePage: false
     property int currentPage: 0
     property bool fitWidth: false
-    readonly property bool ready: document.status === PdfDocument.Ready && document.pageCount > 0
+    readonly property bool ready: document.source.toString() !== "" && document.status === PdfDocument.Ready && document.pageCount > 0
     // La portada ocupa una vista; los siguientes pares empiezan en índices impares.
     readonly property int firstPage: doublePage && currentPage > 0 ? currentPage - (currentPage % 2 === 0 ? 1 : 0) : currentPage
     readonly property bool hasSecondPage: ready && doublePage && firstPage > 0 && firstPage + 1 < document.pageCount
@@ -32,6 +32,14 @@ Item {
     function nextPage() { if (canNext) showPage(lastPage + 1) }
     function fitPage() { fitWidth = false; refreshView() }
     function fitToWidth() { fitWidth = true; refreshView() }
+    function initializeDocument() {
+        if (!ready) return
+        // Elegir el modo solo al abrir; la navegación respeta la selección manual.
+        const cover = document.pagePointSize(0)
+        currentPage = 0
+        doublePage = document.pageCount > 1 && cover.width > 0 && cover.height > cover.width
+        showPage(0)
+    }
     function refreshView() {
         if (!ready || width <= 0 || height <= 0) return
         if (!doublePage && singleLoader.item) {
@@ -50,11 +58,10 @@ Item {
     onDoublePageChanged: Qt.callLater(refreshView)
     onWidthChanged: Qt.callLater(refreshView)
     onHeightChanged: Qt.callLater(refreshView)
-    Connections {
-        target: root.document
-        function onStatusChanged() {
-            if (root.ready) root.showPage(0)
-        }
+    Component.onCompleted: initializeDocument()
+    onReadyChanged: {
+        if (ready) initializeDocument()
+        else currentPage = 0
     }
 
     Loader {

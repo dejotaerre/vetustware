@@ -4,11 +4,27 @@ import QtQuick.Layouts
 
 Dialog {
     id: dialog
+    signal backgroundsRequested()
     signal storageRequested()
+    signal runtimesRequested()
     objectName: "emulatorDialog"
-    anchors.centerIn: parent
-    width: Math.min(880,parent.width-50)
-    height: Math.min(advancedExpanded ? 860 : (globalScope ? 630 : 520),parent.height-50)
+    parent: Overlay.overlay
+    x: 0; y: 0; width: parent.width; height: parent.height; margins: 0
+    focus: true
+    header: Item {
+        implicitHeight: 56
+        RowLayout {
+            anchors.fill: parent; anchors.margins: 12
+            Label { Layout.fillWidth: true; text: dialog.title; color: "#e7edf1"; font.bold: true; font.pixelSize: 16; elide: Text.ElideRight }
+            ToolButton {
+                objectName: "closeEmulatorButton"
+                text: "×"; font.pixelSize: 26; implicitWidth: 36; implicitHeight: 32
+                Accessible.name: qsTranslate("Vetust", "Close")
+                ToolTip.text: qsTranslate("Vetust", "Close (Esc)"); ToolTip.visible: hovered
+                onClicked: dialog.close()
+            }
+        }
+    }
     modal: true
     closePolicy: Popup.CloseOnEscape
     palette.window: "#111e29"; palette.windowText: "#e7edf1"
@@ -177,7 +193,12 @@ Dialog {
             Accessible.name:qsTranslate("Vetust", "Advanced options")
             Accessible.description:dialog.advancedExpanded ? qsTranslate("Vetust", "Expanded") : qsTranslate("Vetust", "Collapsed")
         }
-        Button { visible:dialog.globalScope; text:qsTranslate("Vetust", "Library and folders…"); onClicked:dialog.storageRequested() }
+        RowLayout {
+            visible: dialog.globalScope
+            Button { text:qsTranslate("Vetust", "Libraries and storage"); onClicked:dialog.storageRequested() }
+            Button { text:qsTranslate("Vetust", "Section backgrounds"); onClicked:dialog.backgroundsRequested() }
+        }
+        Button { objectName:"openRuntimes"; visible:dialog.globalScope; text:qsTranslate("Vetust", "Emulators and updates…"); onClicked:dialog.runtimesRequested() }
         Item { visible:!dialog.advancedExpanded; Layout.fillHeight:true }
         ScrollView {
             visible:dialog.advancedExpanded

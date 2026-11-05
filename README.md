@@ -127,6 +127,9 @@ language → Español** to switch to Spanish. Changes apply immediately and are
 saved for future sessions. Game editions, emulation settings and saves are
 independent of the interface language.
 
+The current source tree also includes **Português (Brasil)** (`pt_BR`),
+selectable from the same menu.
+
 Anyone can contribute another language through a JSON file, without changing
 C++ or recompiling the application. See [Translating VETUSTware](docs/TRANSLATING.md)
 for the format, validation and preview instructions. Missing translations fall
@@ -174,3 +177,14 @@ See [THIRD_PARTY.md](THIRD_PARTY.md) for details.
 
 - **Dejotaerre** — project creator and maintainer.
 - **OpenAI Codex** — AI assistance with implementation, testing and documentation, under the maintainer's direction.
+
+## Atari 2600 (development version)
+
+The **ATARI 2600** tab launches local ROMs with Stella. It includes artwork, search,
+favorites, hidden games and edition selection. Exact copies share a variant;
+no ROM is deleted. Choose a folder, fullscreen and Sharp or Classic monitor
+rendering in **Atari settings**. Stella must be installed separately.
+
+The default folder is `atari2600` inside your main library. ROMs and artwork
+travel with that folder; new saves and controller settings stay inside the
+VETUSTware installation. This feature is not included in the 0.3.4 download.

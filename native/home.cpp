@@ -5,14 +5,84 @@
 #include <QFileInfo>
 #include <QCryptographicHash>
 #include <algorithm>
+#include <QRandomGenerator>
+#include <QJsonDocument>
+#include <QSaveFile>
 
-void Backend::refreshHome(){
+namespace {
+constexpr int SpotlightHistoryLimit = 12;
+}
+
+void Backend::refreshHome(bool visit){
     if(homeDay!=QDate::currentDate().toString(Qt::ISODate)){rebuildHome();refresh();}
+    if(!visit)return;
+    if(!homeVisited){
+        QFile history(root+"/data/spotlight-history.json");
+        if(history.open(QIODevice::ReadOnly)){
+            const auto ids=QJsonDocument::fromJson(history.readAll()).array();
+            for(const auto &id:ids){
+                if(id.isString())spotlightHistory.append(id.toString());
+                if(spotlightHistory.size()==SpotlightHistoryLimit)break;
+            }
+        }
+        homeVisited=true;
+    }
+    updateSpotlight(true);
+}
+
+void Backend::updateSpotlight(bool rotate){
+    if(spotlightCandidates.isEmpty()){
+        spotlightData.clear();
+        emit spotlightChanged();
+        return;
+    }
+    const auto &related=collections.value("recommendations");
+    int selected=indexes.value(spotlightData.value("id").toString(),-1);
+    if(rotate || selected<0){
+        // Primero se consideran los títulos ausentes del historial. Si todos se
+        // mostraron, se elige el que lleva más tiempo sin aparecer.
+        QList<int> suggestions, discoveries;
+        int oldest=-1;
+        for(int index:spotlightCandidates){
+            const int position=spotlightHistory.indexOf(games[index]["id"].toString());
+            const int age=position<0 ? SpotlightHistoryLimit : position;
+            if(age<oldest)continue;
+            if(age>oldest){
+                oldest=age;
+                suggestions.clear();
+                discoveries.clear();
+            }
+            if(related.contains(index))suggestions.append(index);
+            else discoveries.append(index);
+        }
+        auto *random=QRandomGenerator::global();
+        const bool useSuggestions=discoveries.isEmpty() || (!suggestions.isEmpty() && random->bounded(3)!=0);
+        const auto &pool=useSuggestions ? suggestions : discoveries;
+        QList<int> illustrated;
+        for(int index:pool){
+            const auto &game=games[index];
+            if(!game["cover"].toString().isEmpty() || !game["shots"].toArray().isEmpty())
+                illustrated.append(index);
+        }
+        const auto &choices=illustrated.isEmpty() ? pool : illustrated;
+        selected=choices[random->bounded(int(choices.size()))];
+        const auto id=games[selected]["id"].toString();
+        spotlightHistory.removeAll(id);
+        spotlightHistory.prepend(id);
+        if(spotlightHistory.size()>SpotlightHistoryLimit)spotlightHistory.removeLast();
+        QSaveFile history(root+"/data/spotlight-history.json");
+        const auto bytes=QJsonDocument(QJsonArray::fromStringList(spotlightHistory)).toJson(QJsonDocument::Compact);
+        if(!history.open(QIODevice::WriteOnly) || history.write(bytes)!=bytes.size() || !history.commit())
+            qWarning()<<"Could not save spotlight history:"<<history.errorString();
+    }
+    spotlightData=publicGame(games[selected]);
+    spotlightData["reason"]=related.contains(selected) ? spotlightRecommendationReason : uiText("A fresh look at your collection");
+    emit spotlightChanged();
 }
 
 void Backend::rebuildHome(){
     homeDay=QDate::currentDate().toString(Qt::ISODate);
-    homeRowData.clear();collections.clear();spotlightData.clear();
+    homeRowData.clear();collections.clear();
     QList<int> daily;
     QHash<int,QByteArray> order;
     for(int i=0;i<games.size();++i){
@@ -71,11 +141,7 @@ void Backend::rebuildHome(){
         recommended=daily.mid(0,36);reason=uiText("Start exploring");
         add("recommendations",reason,uiText("Daily selection · Mark favorites for more relevant suggestions"),recommended);
     }
-    if(!recommended.isEmpty()){
-        spotlightData=publicGame(games[recommended.first()]);spotlightData["reason"]=reason;
-    }else if(!daily.isEmpty()){
-        spotlightData=publicGame(games[daily.first()]);spotlightData["reason"]=uiText("A fresh look at your collection");
-    }
+    spotlightRecommendationReason=reason;
     add("spanish",uiText("In Spanish"),uiText("Editions and subtitles available in your collection"),pick([&](const QJsonObject &g){
         const QString id=g["id"].toString();
         const auto profile=spanishProfiles.contains(id)?spanishProfiles[id].toObject():profiles[id].toObject();
@@ -108,7 +174,9 @@ void Backend::rebuildHome(){
     studioRow("sierra",uiText("Sierra stories"),{"Sierra"});
     studioRow("idsoftware","id Software",{"id Software"});
     auto discovery=pick([&](const QJsonObject &g){const auto id=g["id"].toString();return !favorites.value(id)&&recent.value(id)<=0;});
+    spotlightCandidates=discovery.isEmpty() ? daily : discovery;
     for(int i:recommended)discovery.removeAll(i);
     add("discover",uiText("Discover something different"),uiText("A different selection every day · Beyond the familiar titles"),discovery.mid(0,36));
+    if(homeVisited)updateSpotlight(false);
     emit homeChanged();
 }

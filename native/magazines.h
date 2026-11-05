@@ -6,7 +6,7 @@
 
 class Magazines {
 public:
-    void load(const QString &library);
+    void load(const QString &library,const QString &folder=QString());
     QVariantList series() const;
     QVariantList issues(const QString &series) const;
     QJsonObject entry(const QString &id) const;

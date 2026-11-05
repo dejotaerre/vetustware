@@ -158,6 +158,9 @@ desde **Settings → Interface language → Español**. La elección se aplica a
 instante y se guarda sin cambiar el idioma de los juegos ni las versiones especiales.
 Esta mejora está incluida en la descarga 0.3.3.
 
+Los fuentes actuales también incluyen **Português (Brasil)** (`pt_BR`),
+seleccionable desde el mismo menú.
+
 Cualquier colaborador puede añadir otro idioma mediante un archivo JSON, sin
 recompilar la aplicación. Consulta la [guía de traducción en inglés](docs/TRANSLATING.md).
 Se conservan las capturas originales en español de la versión 0.3.2 y se añade
@@ -168,3 +171,16 @@ la nueva captura con sus controles en inglés.
 
 - **Dejotaerre** — creador y responsable del proyecto.
 - **OpenAI Codex** — asistencia de IA en implementación, pruebas y documentación, bajo la dirección del responsable del proyecto.
+
+## Atari 2600 (versión en desarrollo)
+
+La sección **ATARI 2600** ejecuta ROMs locales con Stella. Incluye imágenes,
+búsqueda, favoritos, juegos ocultos y selección de variantes. Las copias
+idénticas comparten variante; no se borra ninguna ROM. **Ajustes de Atari**
+permite elegir carpeta, pantalla completa y estilo Nítido o Monitor clásico.
+Stella se instala por separado.
+
+La carpeta predeterminada es `atari2600` dentro de la biblioteca principal.
+Las ROMs y las imágenes viajan con ella; las partidas nuevas y los ajustes
+de mandos quedan dentro de la instalación de VETUSTware. Esta función todavía
+no está incluida en la descarga 0.3.4.

@@ -8,7 +8,7 @@
 #include <QCryptographicHash>
 
 void Backend::openMagazine(const QString &id){
-    if(active)return;
+    if(busy())return;
     try{
         const auto entry=magazines.entry(id);const QString title=entry["title"].toString();
         if(entry["kind"]=="pdf"){
