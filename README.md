@@ -1,148 +1,74 @@
-# VETUSTware
+# VETUSTware · Old School Gamer
 
 **English** · [Español](README.es.md)
 
-**Your DOS collection, ready to explore and play.**
+VETUSTware is a native Linux frontend for a local collection of **DOS, ScummVM, Atari 2600 and arcade games**. Search across systems, pick an edition and launch it from its game details. Open a magazine to read a contemporary review, or bring up a game’s manual from its details page.
 
-VETUSTware is a native Linux application built with C++20 and Qt Quick. It
-organizes a local MS-DOS game library and launches games through DOSBox.
-Browse covers, game details, manuals and individual emulation settings in an
-interface designed for exploring your collection. No browser or account needed.
+![Home with a featured DOS adventure, recently played games and recommendations](docs/images/en/home.png)
 
-![VETUSTware home screen in English, with recommendations and favorites](docs/images/en/home.png)
+**Which version should I install?** The screenshots on this page show the current `main` branch. Build from source for the four-engine catalog. The latest downloadable preview, **0.3.4 for Linux x86_64**, offers the DOS library, magazines and PDF reader with English and Spanish controls. [Download 0.3.4](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.4) · [Install the preview](https://github.com/dejotaerre/vetustware/blob/v0.3.4/INSTALLATION.md) · [Build from source](#build-from-source)
 
-[Download 0.3.4](https://github.com/dejotaerre/vetustware/releases/tag/v0.3.4)
-· [Installation guide](INSTALLATION.md)
-· [Library format (Spanish)](docs/BIBLIOTECAS.md)
-· [Report an issue](https://github.com/dejotaerre/vetustware/issues)
+## One search, four libraries
 
-**New in 0.3.4:** optional two-page PDF spreads, with the cover alone, and
-Left/Right arrow-key navigation. English is the default interface language;
-Spanish is available in **Settings → Interface language**.
+Search for **Monkey Island** in Catalog and you can see the DOSBox and ScummVM editions side by side. Each card identifies its engine. Select an engine to narrow the results, or open its dedicated section to browse its editions and settings. Home features a rotating DOS recommendation drawn from your interests and the wider collection.
 
-## What you can do
+![Catalog search for Monkey Island showing DOSBox and ScummVM editions](docs/images/en/search.webp)
 
-- Browse categories and selections, search for games, save favorites and return to recently played titles.
-- View covers, screenshots and manuals from each game's details page.
-- Choose DOSBox Staging, classic DOSBox or DOSBox-X, with global and per-game settings.
-- Toggle fullscreen and select a monitor when more than one is available.
-- Choose Sharp (the default) or Classic monitor (CRT) rendering in DOSBox Staging,
-  globally or per game, while preserving the aspect ratio.
-- Access advanced CPU, memory, video, sound and emulator executable options.
-- Open a DOS console with the game's drives and disk images already mounted.
-- Use XTree Gold or Norton Commander when those tools are supplied by the library.
-- Recognize custom editions and profiles supplied by a VETUSTware library.
-- Switch between English and Spanish without changing the language of your games.
-
-Since 0.3.1, the **Extras** button opens supplementary documents and media
-provided by the library. PDFs open inside the application; other formats use
-your system's viewer. See the [extras format (Spanish)](docs/BIBLIOTECAS.md#complementos-opcionales-desde-031).
-
-Since 0.3.2, **Magazines** offers collections with cover art, integrated PDF
-reading and DOS disk magazines. This material is supplied in the library's
-`Revistas/` folder; it is not included with the application. See the
-[magazine format (Spanish)](docs/BIBLIOTECAS.md#revistas-opcionales).
-
-**Game details:** edition selection, manuals, extras and individual settings.
-The example shows a Spanish game edition selected within the English interface.
-
-![Larry 7 details in the English interface, with its Spanish edition selected](docs/images/en/game-details.png)
-
-**Magazines:** collections of PDF publications and DOS disk magazines.
-
-![Magazine collections in the English interface](docs/images/en/magazines.png)
-
-**Two-page PDF reader (0.3.4):** the cover appears alone, followed by pages 2–3,
-4–5, and so on. Use Left/Right arrows to navigate, and Fit page or Fit width to
-size the whole spread. This example shows Computer Gaming World with English controls.
-
-![VETUSTware 0.3.4 showing PDF pages 4–5 of Computer Gaming World in Two pages mode, with English controls](docs/images/en/pdf-spread.png)
+| Library | What you can do |
+| --- | --- |
+| **DOS · DOSBox** | Choose a supplied edition or translation, open its manual and extras, or launch a DOS prompt with the game's drives and CD image mounted. Choose Staging, classic DOSBox or DOSBox-X and override sound, display or CPU settings for one game. |
+| **ScummVM** | Browse adventures in series order, select a detected edition, hide games or open the ScummVM manager. Each edition has its own launch settings and saves. |
+| **Atari 2600 · Stella** | Browse by box art, inspect gameplay snapshots and choose a cartridge variant. Favorites and hidden titles help organize larger collections. |
+| **Arcade · MAME 0.241** | Browse machines by family, choose a regional variant and filter by category or working status. The launcher checks the selected ROM set against MAME 0.241 before play. |
 
 <details>
-<summary>View settings and the PDF reader</summary>
+<summary>See game details and the three dedicated engine views</summary>
 
-**Settings:** an interface language selector, a fullscreen switch, Sharp
-rendering by default and collapsible advanced options. The monitor selector
-appears only when more than one display is detected; none is shown in this capture.
+**DOS.** Larry 7 has a Spanish edition selected inside the English interface. Its box, screenshots, manual and extras belong to the local collection.
 
-![Global settings with English selected as the interface language](docs/images/en/settings.png)
+![Larry 7 details with the Spanish edition selected](docs/images/en/game-details.png)
 
-**Single-page reading:** the original view remains available. This earlier capture
-opens Larry 7's English game design document from Extras. Close with X or Escape.
+**ScummVM**
 
-![An English Larry 7 design document in the integrated PDF viewer](docs/images/en/pdf-viewer.png)
+![ScummVM adventures grouped by series](docs/images/en/scummvm.webp)
+
+**Atari 2600**
+
+![Stella library with Atari cartridge boxes](docs/images/en/atari.webp)
+
+**Arcade**
+
+![Arcade families, category filter and regional variant counts](docs/images/en/arcade.webp)
 
 </details>
 
-These screenshots show a locally supplied library. The games, artwork, manuals
-and magazines shown are not included with the application or its downloads.
+## Magazines and manuals
 
-## Get started
+Browse magazines by series and issue. Open a PDF directly in the reader, or launch a DOS disk magazine through DOSBox. Portrait documents open in two-page mode with the cover on its own. Use the left and right arrows to turn pages, fit the spread to the window or switch to a single page.
 
-Version **0.3.4 is a preview release for Linux x86_64**. The published executable
-was built and tested on **CachyOS with Qt 6.12**. It is not a universal package:
-you need compatible system libraries. Source builds are available for other
-distributions, but compatibility still needs testing.
+![Computer Gaming World open as a two-page spread with English reader controls](docs/images/en/pdf-spread.png)
 
-1. Install the dependencies listed in [INSTALLATION.md](INSTALLATION.md)
-   and a DOSBox emulator. Most profile work has used DOSBox Staging.
-2. Download and extract `vetustware-0.3.4-linux-x86_64.tar.gz` from
-   [Releases](https://github.com/dejotaerre/vetustware/releases).
-3. Inside the extracted folder, run:
+<details>
+<summary>See the magazine shelf, single-page reader and background settings</summary>
 
-   ```sh
-   python3 helpers/install.py --desktop
-   ```
+![Magazine collections including Computer Gaming World, Game Bytes and Micromanía](docs/images/en/magazines.png)
+![Computer Gaming World cover in single-page mode](docs/images/en/pdf-viewer.png)
 
-4. Open VETUSTware and select your compatible local library.
+Choose a background for each section in **Settings → Section backgrounds**. The preview shows the full image. The section displays it blurred behind the collection.
 
-The default installation directory is `~/vetustware`. The library can live on
-another drive. Playable copies are created as needed in the installation's
-`data/games` folder, or in another folder chosen by the user.
+![Settings showing the selected Magazines background](docs/images/en/settings.png)
 
-The application **does not include or download games, ISOs, ROMs, cover art,
-manuals, emulators or third-party DOS tools**. It can use a prepared custom
-library, supplied separately.
+</details>
 
-## Application, library and saves
+## Bring your collection
 
-| Part | Contents | Location |
-|---|---|---|
-| Application | Executable, helpers, settings and local data | `~/vetustware` by default |
-| Library | Original archives, metadata and optional custom editions | Any available folder or drive |
-| Playable copies | Extracted game files and each user's saves | `data/games` or a custom location |
+VETUSTware installs in `~/vetustware` by default. In **Settings → Libraries and storage**, select the collections you own. They can live on different disks. Each organized collection carries its covers, catalogs and manuals in its own `metadata/` folder. Personal settings and saves stay with the installation by default. DOS playable copies can also use a folder you choose. Games, ROMs, disc images and publications shown here come from a local library and are supplied separately. [Library layout](docs/LIBRARIES.md)
 
-The library is read-only during use. Saves and player changes are stored in
-playable copies. Restoring a copy from the library does not recover newer saves
-that have been deleted.
+For ScummVM and Stella, the development build prefers private runtimes in `~/vetustware/runtime` and can check manually for compatible updates. Arcade pairs a MAME 0.241 runtime with a matching ROM set. [Runtime setup and updates](docs/RUNTIMES.md) · [Arcade library and saves](docs/ARCADE.md)
 
-VETUSTware supports the eXoDOS structure described in the documentation and
-custom VETUSTware libraries. It is not a general-purpose importer for arbitrary
-game folders or ISOs. See the [library format (Spanish)](docs/BIBLIOTECAS.md).
+## Build from source
 
-## Interface languages
-
-VETUSTware defaults to **English**. Select **Settings → Interface
-language → Español** to switch to Spanish. Changes apply immediately and are
-saved for future sessions. Game editions, emulation settings and saves are
-independent of the interface language.
-
-The current source tree also includes **Português (Brasil)** (`pt_BR`),
-selectable from the same menu.
-
-Anyone can contribute another language through a JSON file, without changing
-C++ or recompiling the application. See [Translating VETUSTware](docs/TRANSLATING.md)
-for the format, validation and preview instructions. Missing translations fall
-back to English.
-
-Game descriptions, manuals, magazine content and other imported material retain
-their original languages. The language selector is included from version 0.3.3.
-
-## Build and test
-
-Requirements: C++20, CMake 3.21 or newer, pkg-config, Qt 6.5 or newer
-(Quick, QuickControls2, Sql/SQLite, Concurrent, PdfQuick and Test), libzip and SDL2.
-Python 3 is used for installation, metadata import and translation validation.
+From a checkout of `main`, install a C++20 compiler, CMake 3.21+, pkg-config, Qt 6.5+ (Quick, Quick Controls, QML Dialogs, Quick Effects, SQL with SQLite, Concurrent, PDF Quick and Test), libzip, SDL2 and Python 3. Run the following commands from the repository root.
 
 ```sh
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
@@ -151,40 +77,10 @@ ctest --test-dir native/build --output-on-failure
 python3 helpers/install.py --desktop
 ```
 
-Tests use synthetic data and do not require a game collection. They cover ZIP
-extraction, the catalog, emulation settings, extras, magazines, interface
-navigation, translations and language persistence.
+Open VETUSTware from the application menu and select your libraries. The 0.3.4 binary preview was built on CachyOS with Qt 6.12 and requires compatible system libraries. Use the library format documented for that release when installing its package. [0.3.4 installation guide](https://github.com/dejotaerre/vetustware/blob/v0.3.4/INSTALLATION.md)
 
-## Status and limitations
+## Languages and contributions
 
-- Version 0.3.3 includes English and Spanish interfaces; imported names and descriptions depend on the library.
-- Each game may require a particular DOSBox engine or specific settings. Importing a profile does not verify its compatibility.
-- Linux desktops with X11 or XWayland are supported; other platforms and native Wayland have not been validated for this version.
-- Monitor selection depends on the emulator and the desktop environment.
-- Libraries, translations and images are not downloaded automatically.
+The current interface opens in **English** and also supports **Español** and **Português (Brasil)**. Change it in **Settings → Interface language**. Games and publications keep their own languages. To contribute another translation, add a JSON dictionary and run the validator. [Translation guide](docs/TRANSLATING.md) · [Contributing](CONTRIBUTING.md) · [Report an issue](https://github.com/dejotaerre/vetustware/issues)
 
-For contributions and bug reports, see [CONTRIBUTING.md](CONTRIBUTING.md).
-For interface translations, start with the [English translation guide](docs/TRANSLATING.md).
-
-## License
-
-VETUSTware's own code is released under the [MIT license](LICENSE).
-Dependencies and third-party content retain their own licenses. Game imagery
-visible in the screenshots is not covered by the code's MIT license.
-See [THIRD_PARTY.md](THIRD_PARTY.md) for details.
-
-## Contributors
-
-- **Dejotaerre** — project creator and maintainer.
-- **OpenAI Codex** — AI assistance with implementation, testing and documentation, under the maintainer's direction.
-
-## Atari 2600 (development version)
-
-The **ATARI 2600** tab launches local ROMs with Stella. It includes artwork, search,
-favorites, hidden games and edition selection. Exact copies share a variant;
-no ROM is deleted. Choose a folder, fullscreen and Sharp or Classic monitor
-rendering in **Atari settings**. Stella must be installed separately.
-
-The default folder is `atari2600` inside your main library. ROMs and artwork
-travel with that folder; new saves and controller settings stay inside the
-VETUSTware installation. This feature is not included in the 0.3.4 download.
+Dejotaerre created and maintains VETUSTware, with assistance from OpenAI Codex in implementation, testing and documentation. The project's own code uses the MIT license. Dependencies, game artwork and publications retain their respective licenses. [License](LICENSE) · [Third-party notices](THIRD_PARTY.md)

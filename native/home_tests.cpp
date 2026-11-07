@@ -688,6 +688,85 @@ private slots:
         const auto rows=b.homeRows();b.filter("zzzz","","all",false);QCOMPARE(b.homeRows(),rows);b.refreshHome();QCOMPARE(b.homeRows(),rows);
         b.filter("","","all",false,"favorites");QCOMPARE(b.count(),1);b.toggleFavorite();QCOMPARE(b.count(),0);QVERIFY(f.row("favorites").isEmpty());
     }
+    void spotlightRowsResize(){
+        Fixture f(true);
+        LocalizedEngine engine;
+        engine.rootContext()->setContextProperty("vetust",f.backend.get());
+        engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+        QVERIFY(window);
+        const auto first=f.backend->homeSpotlight()["id"].toString();
+        QSet<QString> previous;
+        for(const auto width:{1920,2560,1480,2560}){
+            window->resize(width,1080);
+            const int expected=width>=2300 ? 3 : width>=1700 ? 2 : 1;
+            QTRY_COMPARE(f.backend->homeSpotlights().size(),expected);
+            QCOMPARE(f.backend->homeSpotlight()["id"].toString(),first);
+            QSet<QString> ids;
+            for(int index=0;index<expected;++index){
+                ids.insert(f.backend->homeSpotlights()[index].toMap()["id"].toString());
+                QQuickItem *card=nullptr;
+                QTRY_VERIFY((card=findVisual(window->contentItem(),"spotlightCard-"+QString::number(index)))!=nullptr);
+                QVERIFY(card->width()>600);
+                QVERIFY(card->mapToScene({card->width(),0}).x()<=width);
+            }
+            QCOMPARE(ids.size(),expected);
+            previous=ids;
+        }
+        const auto stable=f.backend->homeSpotlights();
+        f.backend->refreshHome();
+        QCOMPARE(f.backend->homeSpotlights(),stable);
+        f.backend->refreshHome(true,3);
+        for(const auto &entry:f.backend->homeSpotlights())QVERIFY(!previous.contains(entry.toMap()["id"].toString()));
+        QQuickItem *lastCard=nullptr;
+        QTRY_VERIFY((lastCard=findVisual(window->contentItem(),"spotlightCard-2"))!=nullptr);
+        QTRY_VERIFY(lastCard->width()>600 && lastCard->height()>100);
+        QTest::qWait(100);
+        const auto target=f.backend->homeSpotlights()[2].toMap()["id"].toString();
+        const auto point=lastCard->mapToScene({lastCard->width()-40,lastCard->height()/2});
+        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,point.toPoint());
+        QTRY_COMPARE(f.backend->selected()["id"].toString(),target);
+    }
+    void spotlightClassics(){
+        Fixture f(true);
+        f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");
+        QFile catalog(f.temp.path()+"/data/catalog.json");
+        QVERIFY(catalog.open(QIODevice::ReadOnly));
+        auto data=QJsonDocument::fromJson(catalog.readAll()).object();catalog.close();
+        auto entries=data["games"].toArray();
+        const QHash<int,QString> titles={{0,"DOOM"},{1,"The Secret of Monkey Island"},
+            {4,"Maniac Mansion (Enhanced Version)"},{6,"Maniac Mansion"},
+            {7,"Racter"},{8,"DOOM: Unofficial Levels"}};
+        for(auto it=titles.cbegin();it!=titles.cend();++it){
+            auto entry=entries[it.key()].toObject();entry["title"]=it.value();entries[it.key()]=entry;
+        }
+        data["games"]=entries;QVERIFY(catalog.open(QIODevice::WriteOnly|QIODevice::Truncate));
+        catalog.write(QJsonDocument(data).toJson());catalog.close();
+        f.backend=std::make_unique<Backend>(f.temp.path());
+        f.backend->selectGame(Seed);f.backend->toggleFavorite();
+        const QSet<QString> expected={Seed,"1","4"};
+        for(int visit=0;visit<15;++visit){
+            f.backend->refreshHome(true,3);
+            QSet<QString> ids;
+            for(const auto &value:f.backend->homeSpotlights()){
+                const auto entry=value.toMap();ids.insert(entry["id"].toString());
+                QCOMPARE(entry["reason"].toString(),QString("Classics to rediscover"));
+            }
+            QCOMPARE(ids,expected);
+            QCOMPARE(f.backend->homeSpotlights().size(),3);
+        }
+        // Con pocos clásicos, reducir la fila es preferible a rellenarla con desconocidos.
+        f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");
+        data["games"]=QJsonArray{entries[1],entries[7]};
+        QVERIFY(catalog.open(QIODevice::WriteOnly|QIODevice::Truncate));
+        catalog.write(QJsonDocument(data).toJson());catalog.close();
+        f.backend=std::make_unique<Backend>(f.temp.path());
+        f.backend->refreshHome(true,3);
+        QCOMPARE(f.backend->homeSpotlights().size(),1);
+        QCOMPARE(f.backend->homeSpotlight()["id"].toString(),QString("1"));
+    }
     void spotlightRotation(){
         Fixture f(true);
         f.backend->refreshHome(true);

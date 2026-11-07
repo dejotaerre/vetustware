@@ -1,5 +1,7 @@
 # Bibliotecas locales
 
+[English](LIBRARIES.md) · **Español**
+
 ## Estructura organizada de VETUSTware
 
 Cada colección contiene sus juegos y una subcarpeta `metadata`. Al elegir la

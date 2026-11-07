@@ -139,7 +139,7 @@ compartidas necesarias deben seguir disponibles en el sistema.
 Compartir el archivo de distribución limpio y su SHA256, no comprimir una
 instalación ya utilizada: después de importar y jugar, config/ y data/ contienen
 información del usuario. La distribución de las dependencias y de los contenidos
-ajenos se rige por sus propias licencias; ver THIRD_PARTY.md.
+ajenos se rige por sus propias licencias; consulta [los avisos de terceros](THIRD_PARTY.es.md).
 
 ## Diagnóstico
 
@@ -183,7 +183,7 @@ ajustes globales de emulador y monitor y no se agregan al historial de juegos.
 Las copias locales pueden contener cambios propios: conservarlas si se desea
 mantener esos cambios. Una copia incompleta no se sobrescribe automáticamente.
 
-Para preparar o trasladar una biblioteca, consulta `docs/BIBLIOTECAS.md`.
+Para preparar o trasladar una biblioteca, consulta [la guía de bibliotecas](docs/BIBLIOTECAS.md).
 
 ## Estilo de imagen (desde 0.3.2)
 

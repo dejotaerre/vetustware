@@ -1,56 +1,27 @@
-# Componentes externos
+# Third-party components and artwork
 
-La licencia MIT incluida corresponde al código, documentación e icono propios
-de VETUSTware. Cada dependencia conserva su propia licencia.
+**English** · [Español](THIRD_PARTY.es.md)
 
-Este paquete no redistribuye Qt, SDL, libzip, DOSBox, juegos, ROM, fuentes MIDI,
-carátulas, manuales, XTree ni Norton Commander. Utiliza las bibliotecas y
-emuladores que instale el destinatario en su sistema.
+The MIT license in this repository applies to VETUSTware’s own code, documentation and application icon. Dependencies, emulator runtimes and material supplied in a game library retain their respective licenses.
 
-Referencias oficiales:
+## Libraries and DOS emulators
 
-- Qt: https://www.qt.io/licensing/ (se usan Core, Gui, Qml, Quick,
-  QuickControls2, Sql, Concurrent, Pdf y PdfQuick).
-- SDL: https://www.libsdl.org/license.php
-- libzip: https://libzip.org/license/
-- DOSBox Staging: https://www.dosbox-staging.org/
-- DOSBox clásico: https://www.dosbox.com/
-- DOSBox-X: https://dosbox-x.com/
+The application package uses system libraries. It does not redistribute Qt, SDL, libzip, DOSBox, games, ROMs, MIDI sound banks, game covers, manuals, XTree or Norton Commander.
 
-La colección eXoDOS y sus metadatos se aportan localmente por cada usuario y
-no forman parte del paquete. No hay descargas automáticas de juegos.
+- Qt modules used include Core, Gui, Qml, Quick, QuickControls2, Sql, Concurrent, Pdf and PdfQuick. [Qt licensing](https://www.qt.io/licensing/)
+- [SDL license](https://www.libsdl.org/license.php) · [libzip license](https://libzip.org/license/)
+- [DOSBox Staging](https://www.dosbox-staging.org/) · [DOSBox](https://www.dosbox.com/) · [DOSBox-X](https://dosbox-x.com/)
 
-Las capturas de docs/images muestran la interfaz con contenidos aportados por
-una biblioteca local. Las marcas, imágenes y demás contenidos de juegos que
-aparecen en ellas pertenecen a sus titulares y no se incluyen en la licencia
-MIT del código. No se distribuyen los archivos originales de esos contenidos.
+Users supply eXoDOS collections and metadata locally. The application does not download games. The screenshots in `docs/images/` show material from a local library. Game images, trademarks and other third-party content shown there belong to their respective owners. The application package does not distribute the underlying game files.
 
-Stella es una dependencia opcional para Atari 2600 y se instala por separado.
-Sitio y documentación: https://stella-emu.github.io/ . Su licencia es GPL;
-VETUSTware invoca su ejecutable y consulta la base local mediante `-listrominfo`.
-El paquete de VETUSTware no contiene Stella, su base de ROMs, ROMs Atari. Los catálogos generados pertenecen a la biblioteca local
-y conservan metadatos procedentes de Stella.
+## Optional emulator runtimes
 
-La fotografía de cabecera `native/assets/atari2600-header.png` fue aportada
-por el usuario para la interfaz. La imagen y las marcas no están cubiertas
-por la licencia MIT del código. No se ha identificado su licencia de redistribución.
+**Stella and ScummVM.** VETUSTware can import private runtimes from native system packages or install compatible runtime packages published separately. Each runtime carries its own licenses, resources and provenance. Stella is GPL-licensed. VETUSTware invokes its executable and queries its local database with `-listrominfo`. Generated catalogs stay with the user's library and retain Stella metadata. The application package does not bundle Stella's ROM database or Atari ROMs. [Stella](https://stella-emu.github.io/) · [Runtime preparation and distribution](docs/RUNTIMES.md)
 
-La ilustración `native/assets/scummvm-header.png` se generó con IA para esta
-interfaz a partir de una referencia temática aportada por el usuario. No es
-material oficial de ScummVM; el nombre y sus marcas pertenecen a sus titulares.
+**MAME 0.241.** Arcade requires a matching runtime. MAME uses GPL-2.0-or-later and some components carry additional notices. The locally prepared runtime records its signed Arch package origin and private dependency versions in `PROVENANCE.json` and retains license files. Before distributing it, provide the corresponding sources and notices for every bundled component. Library ROMs, CHDs and artwork are separate third-party material. [Arcade library and runtime](docs/ARCADE.md)
 
-Los runtimes privados de Stella y ScummVM pueden importarse desde los paquetes
-nativos del equipo o instalarse mediante paquetes compatibles publicados para
-VETUSTware. Se conservan sus licencias, recursos y procedencia en cada runtime.
-No forman parte de la licencia MIT ni se incluyen automáticamente en el paquete
-de la aplicación. Véase docs/RUNTIMES.md para preparación y redistribución.
+## Section artwork
 
-## MAME 0.241 (optional private runtime)
-
-Arcade requires the matching MAME 0.241 runtime. MAME is licensed under GPL-2.0-or-later; components have additional notices. The locally prepared runtime records its signed Arch package origin and private dependency versions in `PROVENANCE.json`, and retains license files. Before distributing this runtime, provide the corresponding sources and notices for every bundled component. Library ROMs, CHDs and artwork are separate third-party material and are not covered by VETUSTware's MIT license. See `docs/ARCADE.md`.
-
-La cabecera `native/assets/arcade-header.png` fue compuesta y recortada con IA
-sobre imágenes de Pac-Man, Donkey Kong y Street Fighter II de `mame/cabinets/`
-de la biblioteca aportada por el usuario. Tiene fondo transparente. Las imágenes
-y marcas de referencia pertenecen a sus titulares y no están cubiertas por la
-licencia MIT del código. No se ha identificado su licencia de redistribución.
+- **Atari 2600.** The user supplied the console photograph in `native/assets/atari2600-header.png`. Its redistribution license has not been identified. The image and trademarks are outside the scope of the code's MIT license.
+- **ScummVM.** The illustration in `native/assets/scummvm-header.png` was AI-generated for the interface using a thematic reference supplied by the user. It is unofficial artwork. The ScummVM name and trademarks belong to their owners.
+- **Arcade.** The header in `native/assets/arcade-header.png` was composed and cropped with AI using Pac-Man, Donkey Kong and Street Fighter II cabinet images from the user's `mame/cabinets/` collection. The reference images and marks belong to their owners. Their redistribution licenses have not been identified.

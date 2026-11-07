@@ -45,7 +45,7 @@ def copy_program(source, stage, personal):
                         ignore=None if personal else shutil.ignore_patterns('dos-tools'))
     else:
         (stage / 'runtime').mkdir()
-    for name in ('INSTALACION.md', 'INSTALLATION.md', 'LICENSE', 'THIRD_PARTY.md', 'BUILD_INFO.json'):
+    for name in ('INSTALACION.md', 'INSTALLATION.md', 'LICENSE', 'THIRD_PARTY.md', 'THIRD_PARTY.es.md', 'BUILD_INFO.json'):
         doc = source / name
         if doc.exists():
             shutil.copy2(doc, stage / name)
@@ -139,7 +139,7 @@ def main():
             backup = destination / 'backups' / (datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '-update')
             backup.mkdir(parents=True)
             # Actualizar solo programa y helpers. Configuración, partidas y herramientas propias se conservan.
-            for name in ('vetustware', 'icon.svg', 'helpers', 'translations', 'TRANSLATING.md', 'INSTALACION.md', 'INSTALLATION.md', 'LICENSE', 'THIRD_PARTY.md', 'BUILD_INFO.json'):
+            for name in ('vetustware', 'icon.svg', 'helpers', 'translations', 'TRANSLATING.md', 'INSTALACION.md', 'INSTALLATION.md', 'LICENSE', 'THIRD_PARTY.md', 'THIRD_PARTY.es.md', 'BUILD_INFO.json'):
                 new = stage / name
                 if not new.exists():
                     continue

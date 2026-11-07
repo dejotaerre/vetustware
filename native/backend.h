@@ -38,6 +38,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantList pageGames READ pageGames NOTIFY changed)
     Q_PROPERTY(QVariantList homeRows READ homeRows NOTIFY homeChanged)
     Q_PROPERTY(QVariantMap sectionBackgrounds READ sectionBackgrounds NOTIFY sectionBackgroundsChanged)
+    Q_PROPERTY(QVariantList homeSpotlights READ homeSpotlights NOTIFY spotlightChanged)
     Q_PROPERTY(QVariantMap homeSpotlight READ homeSpotlight NOTIFY spotlightChanged)
     Q_PROPERTY(QVariantMap selected READ selected NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList gameExtras READ gameExtras NOTIFY selectionChanged)
@@ -66,8 +67,9 @@ public:
     QVariantList homeRows() const{return homeRowData;}
     QVariantMap sectionBackgrounds() const{return backgrounds;}
     Q_INVOKABLE QString setSectionBackground(const QString &section,const QUrl &image);
-    QVariantMap homeSpotlight() const{return spotlightData;}
-    Q_INVOKABLE void refreshHome(bool visit=false);
+    QVariantMap homeSpotlight() const{return spotlightData.value(0).toMap();}
+    QVariantList homeSpotlights() const{return spotlightData;}
+    Q_INVOKABLE void refreshHome(bool visit=false,int count=0);
     void retranslate();
     static constexpr int PageSize=28;
     QVariantMap selected() const;
@@ -125,9 +127,11 @@ private:
     QVariantList monitorData;
     Extras extras;
     Magazines magazines;
-    QVariantList homeRowData;QVariantMap spotlightData;
+    QVariantList homeRowData,spotlightData;
+    int spotlightCount=1;
     QHash<QString,QList<int>> collections;QString collectionKey,homeDay;
     QList<int> spotlightCandidates;
+    bool spotlightClassics=false;
     QVariantMap backgrounds;
     quint64 backgroundRevision=0;
     QString spotlightRecommendationReason;

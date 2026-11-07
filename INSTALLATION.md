@@ -24,7 +24,7 @@ Staging, classic DOSBox or DOSBox-X separately.
 
 The downloads contain no games, ISOs, artwork, manuals, magazines, emulators,
 third-party DOS tools, saves or personal configuration. Supply a compatible
-library separately. See [the library format (Spanish)](docs/BIBLIOTECAS.md).
+library separately. See [the library format](docs/LIBRARIES.md).
 
 ## Install or update
 

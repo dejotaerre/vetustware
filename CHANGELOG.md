@@ -1,4 +1,6 @@
-# Cambios de VETUSTware
+# VETUSTware changelog
+
+**English** · [Español](CHANGELOG.es.md)
 
 ## Unreleased
 
@@ -27,7 +29,7 @@
 
 - ScummVM games folder can be selected independently in Library and folders, with an automatic library subfolder default.
 
-- ScummVM: ocultar juegos por carpeta, mostrar los ocultos y restaurar su visibilidad, conservando la elección personal entre sesiones.
+- ScummVM games can be hidden or shown again by folder. Visibility preferences persist across sessions.
 
 - ScummVM folders can include a local cover and a PDF manual, opened with the internal reader.
 
@@ -35,6 +37,15 @@
   catalog artwork where available, search, direct launch and the native manager.
 - ScummVM settings and new saves are kept within VETUSTware, independently of
   DOSBox and the user's standalone ScummVM configuration.
+
+### Arcade
+
+- Fixed fullscreen games opening on the wrong monitor under Wayland by matching the selected display to the native Wayland output.
+
+- Added a dedicated Arcade library pinned to MAME 0.241, with audited ROM sets, grouped regional editions, categories, favorites and hidden games.
+- Added flyers, cabinet photographs, marquees, control panels, title screens and game histories to the game details view.
+- Added configurable library location, global monitor selection, fullscreen and cabinet artwork controls; preserved seed settings and saves are imported without overwriting personal progress.
+- Added English, Spanish and Brazilian Portuguese interface strings, catalog/launch tests and Arcade documentation. No release has been published for these changes.
 
 ## 0.3.4 — 2026-10-31
 
@@ -52,33 +63,18 @@
 
 ## 0.3.2 — 2026-10-31
 
-- Nueva sección Revistas con colecciones, portadas locales, búsqueda y navegación
-  por teclado. Los contenidos se aportan con la biblioteca, separados del motor.
-- Lectura de revistas PDF e índices originales en el visor integrado.
-- Big Blue Disk y Game Bytes con sus menús originales en DOSBox y copias locales
-  que conservan intacta la biblioteca compartida. Respetan ajustes globales,
-  monitor y estilo de imagen; sus sesiones no se mezclan con los juegos recientes.
-- Nítido como estilo predeterminado en DOSBox Staging y Monitor clásico (CRT)
-  como alternativa global o por juego, sin deformar las proporciones.
-- Visor PDF con cierre mediante X o Escape, páginas verticales centradas y
-  apertura de cada documento desde la primera página.
-- Paquetes de fuentes y ejecutable actualizados, con documentación del formato
-  de revistas y pruebas de portabilidad y preservación de datos.
+- Added Magazines with collections, local covers, search and keyboard navigation. The library supplies the publications separately from the application.
+- PDF magazines and original indexes open in the integrated reader.
+- Big Blue Disk and Game Bytes open their original DOSBox menus from local working copies. They use global emulation, monitor and image settings and stay out of recently played games.
+- DOSBox Staging defaults to Sharp rendering. Classic monitor (CRT) can be selected globally or per game while preserving the aspect ratio.
+- The PDF viewer centers portrait pages, starts each document on its first page and closes with X or Escape.
+- Updated source and binary packages, magazine format documentation, and portability and data-preservation tests.
 
 ## 0.3.1 — 2026-10-31
 
-- Extras de biblioteca: documentos y medios complementarios desde las fichas.
-- Visor PDF integrado y extracción de extras con verificación SHA256.
+- Game details can open supplementary documents and media from the library.
+- Added an integrated PDF reader and SHA-256 verification when extracting extras.
 
 ## 0.3.0
 
-- Primera publicación del motor nativo y sus paquetes limpios para Linux.
-
-### Arcade (unreleased)
-
-- Fixed fullscreen games opening on the wrong monitor under Wayland by matching the selected display to the native Wayland output.
-
-- Added a dedicated Arcade library pinned to MAME 0.241, with audited ROM sets, grouped regional editions, categories, favorites and hidden games.
-- Added flyers, cabinet photographs, marquees, control panels, title screens and game histories to the game details view.
-- Added configurable library location, global monitor selection, fullscreen and cabinet artwork controls; preserved seed settings and saves are imported without overwriting personal progress.
-- Added English, Spanish and Brazilian Portuguese interface strings, catalog/launch tests and Arcade documentation. No release has been published for these changes.
+- First public release of the native application and clean Linux packages.

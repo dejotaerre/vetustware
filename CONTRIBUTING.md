@@ -1,37 +1,25 @@
-# Colaborar con VETUSTware
+# Contributing to VETUSTware
 
-Los informes de problemas y las contribuciones se reciben en GitHub Issues y
-Pull Requests. La versión inicial se ha probado en CachyOS; las pruebas en
-otras distribuciones son especialmente útiles.
+**English** · [Español](CONTRIBUTING.es.md)
 
-## Informar de un problema
+Use GitHub Issues for bug reports and pull requests for changes. The initial Linux build was tested on CachyOS. Reports from other distributions help establish where the application runs.
 
-Indica distribución, versión de Qt, escritorio y si usas X11 o Wayland,
-versión de VETUSTware, emulador y pasos para reproducirlo. En problemas de un
-juego, incluye su nombre y edición sin adjuntar sus archivos.
+## Report a problem
 
-El comando `vetustware --diagnostics` puede ayudar, pero muestra rutas locales.
-Revisa los diagnósticos, registros y capturas antes de publicarlos para quitar
-datos personales. No adjuntes partidas privadas, juegos, ISOs, ROMs ni claves.
+Include your distribution, Qt version, desktop environment, X11 or Wayland session, VETUSTware version, emulator and steps to reproduce the problem. For game-specific issues, give the title and edition.
 
-## Cambiar el código
+The output of `vetustware --diagnostics` can help identify the cause. Review diagnostics, logs and screenshots for personal information such as local paths before posting them. Keep private saves, game files, disc images, ROMs and keys out of reports.
 
-1. Compila y ejecuta las pruebas siguiendo el README.
-2. Mantén los cambios centrados en el problema que resuelven.
-3. Añade pruebas cuando el cambio de comportamiento lo necesite; usa datos
-   sintéticos en lugar de archivos de juegos.
-4. Escribe los nuevos comentarios de código en español neutro.
-5. Describe el comportamiento corregido y cómo lo verificaste.
+## Submit a code change
 
-Antes de enviar cambios, comprueba que no se hayan incluido data/, config/,
-runtime/, bibliotecas, registros ni rutas personales. Las contribuciones al
-código propio se publican bajo la licencia MIT del proyecto.
+1. Build the application and run the tests using the [README instructions](README.md#build-from-source).
+2. Keep the change focused on the issue it addresses.
+3. Add a test when the behavior change needs one. Use synthetic fixtures for game data.
+4. Write new source code comments in neutral Spanish.
+5. Describe what changed and how you verified it.
 
-## Interface translations / Traducciones
+Before submitting, check your diff for personal paths, logs, game libraries and local `data/`, `config/` or `runtime/` files. Contributions to the project's own code use its MIT license.
 
-You can contribute a language without changing C++ or rebuilding the app.
-See [Translating VETUSTware](docs/TRANSLATING.md) for the JSON format, validation,
-and preview instructions. English and Spanish are included.
+## Contribute a translation
 
-Para añadir o corregir un idioma, edita los archivos de `translations/`.
-La [guía de traducción](docs/TRANSLATING.md) explica cómo probarlos y enviarlos.
+The interface ships with English, Spanish and Brazilian Portuguese. To add or correct a language, edit a JSON file in `translations/`. The translation guide covers the file format, validation and how to preview your changes without rebuilding. [Translating VETUSTware](docs/TRANSLATING.md)

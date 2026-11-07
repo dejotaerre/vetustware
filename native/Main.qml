@@ -20,7 +20,8 @@ ApplicationWindow {
     property string collectionKey: ""
     property string collectionTitle: ""
     readonly property var sections: [{label:qsTranslate("Vetust", "HOME"),value:"home"},{label:qsTranslate("Vetust", "CATALOG"),value:"all"},{label:qsTranslate("Vetust", "FAVORITES"),value:"favorites"},{label:qsTranslate("Vetust", "RECENT"),value:"recent"},{label:"SCUMMVM",value:"scummvm"},{label:"ATARI 2600",value:"atari"},{label:"ARCADE",value:"arcade"},{label:qsTranslate("Vetust", "MAGAZINES"),value:"magazines"}]
-    property var spotlight: vetust.homeSpotlight
+    readonly property int spotlightColumns: width >= 2300 ? 3 : width >= 1700 ? 2 : 1
+    onSpotlightColumnsChanged: vetust.refreshHome(false,spotlightColumns)
     property int artRevision: 0
     property bool modalOpen: (arcadeLoader.item ? arcadeLoader.item.detailsOpen : false) || backgroundsDialog.visible || runtimesDialog.visible || storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible || (scummLoader.item ? scummLoader.item.detailsOpen : false) || (atariLoader.item ? atariLoader.item.detailsOpen : false)
     property string catalogDetailsEngine: ""
@@ -43,7 +44,7 @@ ApplicationWindow {
     function navigate(target) {
         catalogDetailsEngine=""; view=target; collectionKey=""; collectionTitle=""; search.clear(); genre.currentIndex=0; onlyTested=false
         debounce.stop(); applyFilter()
-        if(target === "home") vetust.refreshHome(true)
+        if(target === "home") vetust.refreshHome(true,window.spotlightColumns)
         if(target === "magazines") magazinesView.reset()
         if(target === "scummvm") vetust.scumm.enter()
         if(target === "arcade") vetust.arcade.enter()
@@ -242,29 +243,42 @@ ApplicationWindow {
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             header: Item {
                 width: homeFeed.width; height: window.height < 800 ? 268 : 292
-                Rectangle {
+                RowLayout {
                     anchors.fill: parent; anchors.bottomMargin: 20; anchors.rightMargin: 14
-                    radius: 10; color: "#122230"; border.color: "#344552"; clip: true
-                    Image { anchors.fill: parent; source: window.art(window.spotlight.background || (window.spotlight.shots || [])[0]); fillMode: Image.PreserveAspectCrop; opacity: 0.12; asynchronous: true; sourceSize.width: 1280 }
-                    RowLayout {
-                        anchors.fill: parent; anchors.margins: 22; spacing: 28
-                        ColumnLayout {
-                            Layout.fillWidth: true; Layout.preferredWidth: 600; spacing: 8
-                            LabelText { Layout.fillWidth: true; text: window.spotlight.reason || qsTranslate("Vetust", "DISCOVER THE COLLECTION"); color: window.cyan; elide: Text.ElideRight; font.pixelSize: 11 }
-                            Text { Layout.fillWidth: true; text: window.spotlight.title || qsTranslate("Vetust", "Your next adventure"); color: "#f1d3a0"; font.family: "Noto Serif"; font.pixelSize: window.width < 1200 ? 27 : 33; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
-                            LabelText { Layout.fillWidth: true; text: (window.spotlight.year || "") + " · " + (window.spotlight.developer || "MS-DOS"); elide: Text.ElideRight }
-                            Text { Layout.fillWidth: true; text: window.spotlight.summary || qsTranslate("Vetust", "Explore your MS-DOS game collection."); color: "#b6c4cf"; font.pixelSize: 12; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
-                            Item { Layout.fillHeight: true }
-                            RowLayout {
-                                Action { text: qsTranslate("Vetust", "Explore this game  →"); primary: true; enabled: !!window.spotlight.id; onClicked: window.openGame(window.spotlight.id) }
-                                LabelText { objectName: "catalogTotalLabel"; text: qsTranslate("Vetust", "%1 stories to discover").arg(vetust.catalogCount.toLocaleString(Qt.locale(languages.current),"f",0)); visible: window.width >= 1300; font.pixelSize: 10 }
-                            }
-                        }
+                    spacing: 16
+                    Repeater {
+                        model: vetust.homeSpotlights
                         Rectangle {
-                            Layout.preferredWidth: parent.width*0.40; Layout.fillHeight: true
-                            radius: 6; color: "#070e14"; border.color: "#3c4b56"
-                            Art { anchors.fill: parent; anchors.margins: 4; source: window.art((window.spotlight.shots || [])[0] || window.spotlight.cover); sourceSize.width: 800 }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: window.openGame(window.spotlight.id) }
+                            id: spotlightCard
+                            required property var modelData
+                            required property int index
+                            objectName: "spotlightCard-"+index
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            Layout.preferredWidth: 1
+                            property bool compact: window.spotlightColumns > 1
+                            radius: 10; color: "#122230"; border.color: "#344552"; clip: true
+                            Image { anchors.fill: parent; source: window.art(spotlightCard.modelData.background || (spotlightCard.modelData.shots || [])[0]); fillMode: Image.PreserveAspectCrop; opacity: 0.12; asynchronous: true; sourceSize.width: 1280 }
+                            RowLayout {
+                                anchors.fill: parent; anchors.margins: spotlightCard.compact ? 18 : 22; spacing: spotlightCard.compact ? 18 : 28
+                                ColumnLayout {
+                                    Layout.fillWidth: true; Layout.preferredWidth: 600; spacing: 8
+                                    LabelText { Layout.fillWidth: true; text: spotlightCard.modelData.reason || qsTranslate("Vetust", "DISCOVER THE COLLECTION"); color: window.cyan; elide: Text.ElideRight; font.pixelSize: 11 }
+                                    Text { Layout.fillWidth: true; text: spotlightCard.modelData.title || qsTranslate("Vetust", "Your next adventure"); color: "#f1d3a0"; font.family: "Noto Serif"; font.pixelSize: spotlightCard.compact ? 25 : window.width < 1200 ? 27 : 33; wrapMode: Text.WordWrap; maximumLineCount: spotlightCard.compact ? 3 : 2; elide: Text.ElideRight }
+                                    LabelText { Layout.fillWidth: true; text: (spotlightCard.modelData.year || "") + " · " + (spotlightCard.modelData.developer || "MS-DOS"); elide: Text.ElideRight }
+                                    Text { Layout.fillWidth: true; text: spotlightCard.modelData.summary || qsTranslate("Vetust", "Explore your MS-DOS game collection."); color: "#b6c4cf"; font.pixelSize: 12; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+                                    Item { Layout.fillHeight: true }
+                                    RowLayout {
+                                        Action { text: qsTranslate("Vetust", "Explore this game  →"); primary: true; enabled: !!spotlightCard.modelData.id; onClicked: window.openGame(spotlightCard.modelData.id) }
+                                        LabelText { objectName: "catalogTotalLabel"; text: qsTranslate("Vetust", "%1 stories to discover").arg(vetust.catalogCount.toLocaleString(Qt.locale(languages.current),"f",0)); visible: !spotlightCard.compact && window.width >= 1300; font.pixelSize: 10 }
+                                    }
+                                }
+                                Rectangle {
+                                    Layout.preferredWidth: parent.width*0.40; Layout.fillHeight: true
+                                    radius: 6; color: "#070e14"; border.color: "#3c4b56"
+                                    Art { anchors.fill: parent; anchors.margins: 4; source: window.art((spotlightCard.modelData.shots || [])[0] || spotlightCard.modelData.cover); sourceSize.width: 800 }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: window.openGame(spotlightCard.modelData.id) }
+                                }
+                            }
                         }
                     }
                 }
@@ -561,7 +575,7 @@ ApplicationWindow {
     }
     RuntimesDialog { id:runtimesDialog }
     StorageDialog { id:storageDialog }
-    Component.onCompleted: { vetust.refreshHome(true); if(vetust.storageSettings.needsSetup)storageDialog.begin() }
+    Component.onCompleted: { vetust.refreshHome(true,window.spotlightColumns); if(vetust.storageSettings.needsSetup)storageDialog.begin() }
     EmulatorDialog { id: emulatorDialog; onBackgroundsRequested: backgroundsDialog.begin(window.view); onStorageRequested:{emulatorDialog.close();storageDialog.begin()} onRuntimesRequested:{emulatorDialog.close();runtimesDialog.begin()} }
     Timer { interval: 60000; running: true; repeat: true; onTriggered: vetust.refreshHome() }
     Shortcut { sequence: "F11"; onActivated: window.fullscreen() }

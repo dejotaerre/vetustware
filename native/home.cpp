@@ -11,11 +11,85 @@
 
 namespace {
 constexpr int SpotlightHistoryLimit = 12;
+
+QList<int> classicSpotlights(const QList<QJsonObject> &games){
+    // Selección editorial documentada en docs/FEATURED_GAMES.md, no un ranking
+    // de ventas. Cada fila agrupa ediciones del mismo juego, en orden preferido.
+    static const QStringList titles={
+        "The Secret of Monkey Island",
+        "Monkey Island 2: LeChuck's Revenge",
+        "Maniac Mansion: Day of the Tentacle|Day of the Tentacle",
+        "Indiana Jones and the Fate of Atlantis",
+        "Indiana Jones and the Last Crusade: The Graphic Adventure",
+        "Sam & Max Hit the Road",
+        "Full Throttle",
+        "The Dig",
+        "Loom",
+        "Maniac Mansion (Enhanced Version)|Maniac Mansion",
+        "DOOM|The Ultimate DOOM",
+        "DOOM II: Hell on Earth",
+        "Quake",
+        "Wolfenstein 3D",
+        "Duke Nukem 3D: Atomic Edition|Duke Nukem 3D",
+        "Blood|One Unit Whole Blood",
+        "Descent",
+        "System Shock",
+        "Prince of Persia",
+        "Prince of Persia 2: The Shadow & The Flame",
+        "Lemmings",
+        "SimCity 2000: CD Collection|SimCity 2000",
+        "SimCity Enhanced CD-ROM|SimCity Classic|SimCity",
+        "Civilization|Sid Meier's Civilization",
+        "Dune II: The Building of a Dynasty|Dune II: Battle for Arrakis",
+        "Command & Conquer",
+        "Command & Conquer: Red Alert",
+        "Warcraft: Orcs & Humans",
+        "Warcraft II: Tides of Darkness",
+        "X-COM: UFO Defense|UFO: Enemy Unknown",
+        "Master of Orion",
+        "Master of Orion II: Battle at Antares",
+        "Ultima Underworld: The Stygian Abyss",
+        "Ultima VI: The False Prophet",
+        "Star Wars: TIE Fighter (Collector's CD-ROM)|Star Wars: TIE Fighter",
+        "Star Wars: X-Wing (Collector's CD-ROM)|Star Wars: X-Wing",
+        "Wing Commander",
+        "Jazz Jackrabbit CD-ROM|Jazz Jackrabbit",
+        "Flashback: The Quest for Identity|Flashback",
+        "Disney's Aladdin|Aladdin",
+        "The Lion King",
+        "King's Quest VI: Heir Today, Gone Tomorrow",
+        "Space Quest IV: Roger Wilco and the Time Rippers",
+        "Gabriel Knight: Sins of the Fathers",
+        "Beneath a Steel Sky",
+        "Theme Hospital",
+        "Theme Park",
+        "Scorched Earth"
+    };
+    QHash<QString,int> byTitle;
+    for(int i=0;i<games.size();++i){
+        const auto title=games[i]["title"].toString().simplified().toCaseFolded();
+        if(!byTitle.contains(title))byTitle[title]=i;
+    }
+    QList<int> result;
+    for(const auto &group:titles){
+        for(const auto &title:group.split('|')){
+            const auto found=byTitle.constFind(title.toCaseFolded());
+            if(found!=byTitle.cend()){result.append(found.value());break;}
+        }
+    }
+    return result;
+}
 }
 
-void Backend::refreshHome(bool visit){
+void Backend::refreshHome(bool visit,int count){
+    const int wanted=count>0 ? qBound(1,count,3) : spotlightCount;
+    const bool resized=wanted!=spotlightCount;
+    spotlightCount=wanted;
     if(homeDay!=QDate::currentDate().toString(Qt::ISODate)){rebuildHome();refresh();}
-    if(!visit)return;
+    if(!visit){
+        if(resized && homeVisited)updateSpotlight(false);
+        return;
+    }
     if(!homeVisited){
         QFile history(root+"/data/spotlight-history.json");
         if(history.open(QIODevice::ReadOnly)){
@@ -37,13 +111,23 @@ void Backend::updateSpotlight(bool rotate){
         return;
     }
     const auto &related=collections.value("recommendations");
-    int selected=indexes.value(spotlightData.value("id").toString(),-1);
-    if(rotate || selected<0){
+    QList<int> chosen;
+    if(!rotate){
+        for(const auto &entry:spotlightData){
+            const int index=indexes.value(entry.toMap()["id"].toString(),-1);
+            if(spotlightCandidates.contains(index))chosen.append(index);
+        }
+    }
+    const int count=qMin(spotlightCount,int(spotlightCandidates.size()));
+    chosen=chosen.mid(0,count);
+    const bool newSelection=chosen.size()<count;
+    while(chosen.size()<count){
         // Primero se consideran los títulos ausentes del historial. Si todos se
         // mostraron, se elige el que lleva más tiempo sin aparecer.
         QList<int> suggestions, discoveries;
         int oldest=-1;
         for(int index:spotlightCandidates){
+            if(chosen.contains(index))continue;
             const int position=spotlightHistory.indexOf(games[index]["id"].toString());
             const int age=position<0 ? SpotlightHistoryLimit : position;
             if(age<oldest)continue;
@@ -65,18 +149,26 @@ void Backend::updateSpotlight(bool rotate){
                 illustrated.append(index);
         }
         const auto &choices=illustrated.isEmpty() ? pool : illustrated;
-        selected=choices[random->bounded(int(choices.size()))];
+        const int selected=choices[random->bounded(int(choices.size()))];
+        chosen.append(selected);
         const auto id=games[selected]["id"].toString();
         spotlightHistory.removeAll(id);
         spotlightHistory.prepend(id);
         if(spotlightHistory.size()>SpotlightHistoryLimit)spotlightHistory.removeLast();
+    }
+    if(newSelection){
         QSaveFile history(root+"/data/spotlight-history.json");
         const auto bytes=QJsonDocument(QJsonArray::fromStringList(spotlightHistory)).toJson(QJsonDocument::Compact);
         if(!history.open(QIODevice::WriteOnly) || history.write(bytes)!=bytes.size() || !history.commit())
             qWarning()<<"Could not save spotlight history:"<<history.errorString();
     }
-    spotlightData=publicGame(games[selected]);
-    spotlightData["reason"]=related.contains(selected) ? spotlightRecommendationReason : uiText("A fresh look at your collection");
+    spotlightData.clear();
+    for(int selected:chosen){
+        auto entry=publicGame(games[selected]);
+        entry["reason"]=spotlightClassics ? uiText("Classics to rediscover")
+            : related.contains(selected) ? spotlightRecommendationReason : uiText("A fresh look at your collection");
+        spotlightData.append(entry);
+    }
     emit spotlightChanged();
 }
 
@@ -174,7 +266,11 @@ void Backend::rebuildHome(){
     studioRow("sierra",uiText("Sierra stories"),{"Sierra"});
     studioRow("idsoftware","id Software",{"id Software"});
     auto discovery=pick([&](const QJsonObject &g){const auto id=g["id"].toString();return !favorites.value(id)&&recent.value(id)<=0;});
-    spotlightCandidates=discovery.isEmpty() ? daily : discovery;
+    spotlightCandidates=classicSpotlights(games);
+    spotlightClassics=!spotlightCandidates.isEmpty();
+    // Los clásicos siguen participando aunque ya sean favoritos o se hayan jugado.
+    // Una biblioteca sin ninguno conserva la selección de su propio catálogo.
+    if(!spotlightClassics)spotlightCandidates=discovery.isEmpty() ? daily : discovery;
     for(int i:recommended)discovery.removeAll(i);
     add("discover",uiText("Discover something different"),uiText("A different selection every day · Beyond the familiar titles"),discovery.mid(0,36));
     if(homeVisited)updateSpotlight(false);
