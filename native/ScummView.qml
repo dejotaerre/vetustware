@@ -9,7 +9,7 @@ ColumnLayout {
     property bool showHidden: false
     property bool detailsOpen: details.visible
     property var selected: ({})
-    property var metadata: vetust.scummArtwork(selected.gameId || "")
+    property var metadata: { languages.current; return vetust.scummArtwork(selected.gameId || "") }
     property var variants: selected.variants || []
     property string target: selected.target || ""
     spacing: 16

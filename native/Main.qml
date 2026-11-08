@@ -23,7 +23,7 @@ ApplicationWindow {
     readonly property int spotlightColumns: width >= 2300 ? 3 : width >= 1700 ? 2 : 1
     onSpotlightColumnsChanged: vetust.refreshHome(false,spotlightColumns)
     property int artRevision: 0
-    property bool modalOpen: (arcadeLoader.item ? arcadeLoader.item.detailsOpen : false) || backgroundsDialog.visible || runtimesDialog.visible || storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible || (scummLoader.item ? scummLoader.item.detailsOpen : false) || (atariLoader.item ? atariLoader.item.detailsOpen : false)
+    property bool modalOpen: (arcadeLoader.item ? arcadeLoader.item.detailsOpen : false) || customizationDialog.visible || backgroundsDialog.visible || runtimesDialog.visible || storageDialog.visible || details.visible || emulatorDialog.visible || infoDialog.visible || imageDialog.visible || manualDialog.visible || extrasDialog.visible || busyDialog.visible || (scummLoader.item ? scummLoader.item.detailsOpen : false) || (atariLoader.item ? atariLoader.item.detailsOpen : false)
     property string catalogDetailsEngine: ""
     readonly property bool unifiedCatalogVisible: view === "all" && collectionKey === ""
     property bool onlyTested: false
@@ -180,20 +180,43 @@ ApplicationWindow {
         }
     }
     ColumnLayout {
+        id: browsingContent; objectName: "browsingContent"
+        focus: true
+        Keys.onPressed: function(event) {
+            event.accepted=false
+            if(window.modalOpen || search.activeFocus || !search.enabled) return
+            if(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
+            const focused=window.activeFocusItem
+            if(focused instanceof TextInput || focused instanceof TextEdit) return
+            if(!event.text || !event.text.trim() || event.text.charCodeAt(0)<32) return
+            // Empezar una búsqueda con la primera letra, sin perderla al cambiar el foco.
+            search.text=event.text
+            search.forceActiveFocus(Qt.OtherFocusReason)
+            search.cursorPosition=search.length
+            search.textEdited()
+            event.accepted=true
+        }
         anchors.fill: parent; anchors.margins: window.width < 1200 ? 20 : 32
         spacing: 16
         RowLayout {
             Layout.fillWidth: true; Layout.preferredHeight: 52; spacing: window.width < 1400 ? 4 : window.width < 1800 ? 8 : 18
             RowLayout {
                 spacing: 14
-                Rectangle { width: 64; height: 47; radius: 8; color: "#0b1722"; border.color: "#64543f"
-                    Text { anchors.centerIn: parent; text: "V:>_"; color: window.gold; font.pixelSize: 23; font.family: "monospace" }
+                Button {
+                    objectName: "logoHomeButton"
+                    implicitWidth: 64; implicitHeight: 47; padding: 0
+                    Accessible.name: qsTranslate("Vetust", "HOME")
+                    ToolTip.text: qsTranslate("Vetust", "HOME"); ToolTip.visible: hovered
+                    contentItem: Text { text: "V:>_"; color: window.gold; font.pixelSize: 23; font.family: "monospace"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { radius: 8; color: "#0b1722"; border.color: parent.hovered || parent.activeFocus ? window.cyan : "#64543f" }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    onClicked: window.navigate("home")
                 }
                 Column {
                     visible: window.width >= 1480
                     spacing: 5
                     Text { text: "VETUSTware"; color: window.ink; font.pixelSize: window.width < 1400 ? 22 : 27; font.letterSpacing: 1.5; font.weight: Font.DemiBold }
-                    Text { text: "Old School Gamer"; color: window.muted; font.pixelSize: 8; font.letterSpacing: 3 }
+                    Text { text: "Old School Gamer"; color: "#c2cbd2"; font.pixelSize: 12; font.weight: Font.DemiBold; font.letterSpacing: 1.5 }
                 }
             }
             Repeater { model: window.sections
@@ -368,7 +391,7 @@ ApplicationWindow {
     }
     Dialog {
         id: details; objectName: "gameDetails"
-        background: LibraryBackdrop { source: window.art(game.cover || game.box3d || (shots.length ? shots[0] : "")) }
+        background: LibraryBackdrop { source: window.art(game.background || game.cover || game.box3d || (shots.length ? shots[0] : "")) }
         parent: Overlay.overlay; x: 0; y: 0; width: parent.width; height: parent.height; margins: 0
         modal: true; focus: true; title: game.title || qsTranslate("Vetust", "Game details")
         standardButtons: Dialog.NoButton
@@ -441,6 +464,7 @@ ApplicationWindow {
                     spacing: 8
                     Action { text: qsTranslate("Vetust", "⚙  Configure this game"); implicitHeight: 32; enabled: !vetust.busy; onClicked: emulatorDialog.begin(false) }
                     Action { objectName: "openDosFolder"; text: qsTranslate("Vetust", "Open folder"); implicitHeight: 32; enabled: !!game.playable && !vetust.busy; onClicked: vetust.openGameFolder() }
+                    Action { objectName: "customizeDosGame"; text: qsTranslate("Vetust", "Customize details"); implicitHeight: 32; enabled: !vetust.busy; onClicked: customizationDialog.begin(game.id) }
                     Action {
                         id: gameTools; objectName: "gameToolsButton"
                         text: "⋯"; implicitHeight: 32; implicitWidth: 44; enabled: !vetust.busy
@@ -482,6 +506,7 @@ ApplicationWindow {
             }
         }
     }
+    GameCustomizationDialog { id: customizationDialog }
     Rectangle {
         visible: vetust.status!==""; anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottomMargin: 22
         width: Math.min(window.width-80,statusRow.implicitWidth+40); height: vetust.busy ? 68 : 52; radius: 8; color: "#142a37"; border.color: "#547e87"
@@ -580,5 +605,5 @@ ApplicationWindow {
     Timer { interval: 60000; running: true; repeat: true; onTriggered: vetust.refreshHome() }
     Shortcut { sequence: "F11"; onActivated: window.fullscreen() }
     Shortcut { sequence: "/"; enabled: !window.modalOpen && !search.activeFocus; onActivated: search.forceActiveFocus() }
-    Shortcut { sequence: "F"; enabled: details.opened && !emulatorDialog.visible && !infoDialog.visible && !manualDialog.visible && !imageDialog.visible && !extrasDialog.visible; onActivated: vetust.toggleFavorite() }
+    Shortcut { sequence: "F"; enabled: details.opened && !customizationDialog.visible && !emulatorDialog.visible && !infoDialog.visible && !manualDialog.visible && !imageDialog.visible && !extrasDialog.visible; onActivated: vetust.toggleFavorite() }
 }

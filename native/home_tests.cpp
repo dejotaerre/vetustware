@@ -87,6 +87,130 @@ static QQuickItem *findVisual(QQuickItem *item,const QString &name){
 class HomeTests:public QObject {
     Q_OBJECT
 private slots:
+    void dosCustomization(){
+        Fixture f;
+        const auto metadata=f.temp.path()+"/dos/metadata";QVERIFY(QDir().mkpath(metadata));
+        auto write=[](const QString &path,const QJsonObject &data){QFile f(path);if(!f.open(QIODevice::WriteOnly))return false;f.write(QJsonDocument(data).toJson());return true;};
+        auto bytes=[](const QString &path){QFile f(path);if(!f.open(QIODevice::ReadOnly))qFatal("No se pudo leer el archivo de prueba");return f.readAll();};
+        QVERIFY(write(f.temp.path()+"/config/storage.json",{{"dosbox",f.temp.path()+"/dos"},{"embeddedMetadata",true}}));
+        QVERIFY(write(metadata+"/descriptions.es.json",{{Seed,"Texto español original"}}));
+        auto reload=[&]{f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");f.backend=std::make_unique<Backend>(f.temp.path());};reload();
+        const auto catalogBefore=bytes(f.temp.path()+"/data/catalog.json"), profilesBefore=bytes(f.temp.path()+"/data/original-profiles.json"), spanishBefore=bytes(metadata+"/descriptions.es.json");
+        auto draft=f.backend->gameCustomization(Seed);QVERIFY(!draft.contains("error"));
+        const auto original=f.backend->selected();
+        auto fields=draft["fields"].toMap(),descriptions=draft["descriptions"].toMap();
+        fields["title"]="Mi aventura";fields["genre"]="Personal";descriptions["en"]="My adventure";descriptions["es"]="Mi descripción";
+        const auto external=f.temp.path()+"/external.png";QImage image(80,120,QImage::Format_ARGB32);image.fill(QColor(12,34,56,120));QVERIFY(image.save(external));
+        fields["cover"]=QUrl::fromLocalFile(external).toString();fields["shots"]=QVariantList{QUrl::fromLocalFile(external).toString()};draft["fields"]=fields;draft["descriptions"]=descriptions;
+        QCOMPARE(f.backend->saveGameCustomization(Seed,draft),QString());
+        QCOMPARE(f.backend->selected()["title"].toString(),QString("Mi aventura"));QVERIFY(f.backend->genres().contains("Personal"));
+        QCOMPARE(f.backend->unifiedCatalog("Mi aventura","dosbox",0)["count"].toInt(),1);
+        const auto path=metadata+"/customizations/"+Seed+".json";const auto saved=bytes(path);QVERIFY(!saved.contains(f.temp.path().toUtf8()));
+        QVERIFY(QFile::remove(external));reload();
+        QCOMPARE(f.backend->selected()["title"].toString(),QString("Mi aventura"));
+        ArtProvider art(f.temp.path(),f.backend->assets());QSize size;const auto cover=art.requestImage(f.backend->selected()["cover"].toString(),&size,QSize(120,120));QVERIFY(!cover.isNull());QVERIFY(cover.hasAlphaChannel());
+        const auto previousLocale=QLocale();QLocale::setDefault(QLocale("es"));f.backend->retranslate();QCOMPARE(f.backend->selected()["description"].toString(),QString("Mi descripción"));
+        QLocale::setDefault(QLocale("en"));f.backend->retranslate();QCOMPARE(f.backend->selected()["description"].toString(),QString("My adventure"));
+        auto invalid=f.backend->gameCustomization(Seed);auto invalidFields=invalid["fields"].toMap();invalidFields["cover"]="file:///missing/image.png";invalid["fields"]=invalidFields;
+        QVERIFY(!f.backend->saveGameCustomization(Seed,invalid).isEmpty());QCOMPARE(bytes(path),saved);
+        // La ficha viaja con la biblioteca y sus referencias se resuelven tras moverla.
+        QVERIFY(QDir().rename(f.temp.path()+"/dos",f.temp.path()+"/moved"));
+        QVERIFY(write(f.temp.path()+"/config/storage.json",{{"dosbox",f.temp.path()+"/moved"},{"embeddedMetadata",true}}));reload();
+        ArtProvider movedArt(f.temp.path(),f.backend->assets());QVERIFY(!movedArt.requestImage(f.backend->selected()["cover"].toString(),&size,QSize(120,120)).isNull());
+        QCOMPARE(f.backend->resetGameCustomization(Seed),QString());QCOMPARE(f.backend->selected()["title"],original["title"]);
+        QCOMPARE(f.backend->selected()["cover"],original["cover"]);
+        QCOMPARE(bytes(f.temp.path()+"/data/catalog.json"),catalogBefore);QCOMPARE(bytes(f.temp.path()+"/data/original-profiles.json"),profilesBefore);
+        QCOMPARE(bytes(f.temp.path()+"/moved/metadata/descriptions.es.json"),spanishBefore);
+        QVERIFY(!f.backend->saveGameCustomization("../invalid",draft).isEmpty());
+        QLocale::setDefault(previousLocale);
+    }
+    void customizationDialog(){
+        Fixture f;
+        const auto metadata=f.temp.path()+"/dos/metadata";QVERIFY(QDir().mkpath(metadata));
+        QFile storage(f.temp.path()+"/config/storage.json");QVERIFY(storage.open(QIODevice::WriteOnly));storage.write(QJsonDocument(QJsonObject{{"dosbox",f.temp.path()+"/dos"},{"embeddedMetadata",true}}).toJson());storage.close();
+        f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");f.backend=std::make_unique<Backend>(f.temp.path());
+        LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        QSignalSpy warnings(&engine,&QQmlEngine::warnings);engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);
+        auto dialog=window->findChild<QObject*>("gameCustomizationDialog");QVERIFY(dialog);
+        for(const auto size:{QSize(1480,920),QSize(1050,720)}){
+            window->resize(size);QVERIFY(QMetaObject::invokeMethod(dialog,"begin",Q_ARG(QVariant,Seed)));QTest::qWait(150);
+            QCOMPARE(dialog->property("width").toInt(),window->width());QCOMPARE(dialog->property("height").toInt(),window->height());
+            auto input=findVisual(window->contentItem(),"customField_title");QVERIFY(input);
+            const auto pos=input->mapToScene({input->width()/2,input->height()/2});QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,pos.toPoint());
+            QTest::keyClick(window,Qt::Key_End);for(char c:QByteArray(" TEST")){QTest::keyClick(window,c);QVERIFY(input->hasActiveFocus());}
+            QCOMPARE(dialog->property("fields").toMap()["title"].toString(),QString("Monkey Island TEST"));
+            auto tab=findVisual(window->contentItem(),"customizationImagesTab");QVERIFY(tab);QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,tab->mapToScene({tab->width()/2,tab->height()/2}).toPoint());QTest::qWait(100);
+            const auto dir=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");if(!dir.isEmpty()){QDir().mkpath(dir);window->grabWindow().save(dir+"/customization-images-"+QString::number(size.width())+".png");}
+            QVERIFY(QMetaObject::invokeMethod(dialog,"close"));QCOMPARE(f.backend->selected()["title"].toString(),QString("Monkey Island"));
+        }
+        QVERIFY(QMetaObject::invokeMethod(dialog,"begin",Q_ARG(QVariant,Seed)));QTest::qWait(100);
+        auto description=findVisual(window->contentItem(),"customDescription");QVERIFY(description);description->setProperty("text","My edited description");
+        auto picker=window->findChild<QObject*>("customDescriptionLanguage");QVERIFY(picker);picker->setProperty("currentIndex",0);QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,0)));
+        description->setProperty("text","Mi descripción editada");picker->setProperty("currentIndex",1);QVERIFY(QMetaObject::invokeMethod(picker,"activated",Q_ARG(int,1)));
+        QCOMPARE(description->property("text").toString(),QString("My edited description"));
+        auto save=findVisual(window->contentItem(),"saveCustomization");QVERIFY(save);QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,save->mapToScene({save->width()/2,save->height()/2}).toPoint());
+        QTRY_VERIFY(!dialog->property("visible").toBool());QCOMPARE(f.backend->selected()["description"].toString(),QString("My edited description"));
+        const auto result=f.backend->gameCustomization(Seed);QCOMPARE(result["descriptions"].toMap()["es"].toString(),QString("Mi descripción editada"));
+        QCOMPARE(warnings.size(),0);
+    }
+    void customizationPreview(){
+        const auto library=qEnvironmentVariable("VETUST_CUSTOMIZATION_PREVIEW"),screens=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
+        if(library.isEmpty()||screens.isEmpty())QSKIP("Vista previa opcional, sin guardar cambios");
+        QTemporaryDir temp;QVERIFY(QDir().mkpath(temp.path()+"/config"));
+        QFile storage(temp.path()+"/config/storage.json");QVERIFY(storage.open(QIODevice::WriteOnly));storage.write(QJsonDocument(QJsonObject{{"dosbox",library},{"embeddedMetadata",true}}).toJson());storage.close();
+        Backend backend(temp.path());LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",&backend);engine.addImageProvider("art",new ArtProvider(temp.path(),backend.assets()));
+        engine.languages.setLanguage("es");backend.retranslate();QSignalSpy warnings(&engine,&QQmlEngine::warnings);
+        engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);
+        auto dialog=window->findChild<QObject*>("gameCustomizationDialog");QVERIFY(dialog);
+        for(const auto size:{QSize(1480,920),QSize(1050,720)}){
+            window->resize(size);QVERIFY(QMetaObject::invokeMethod(dialog,"begin",Q_ARG(QVariant,QString("17797375-791f-41f1-9e43-81d040ca4b0a"))));QTest::qWait(300);
+            auto close=findVisual(window->contentItem(),"closeCustomization");QVERIFY(close);const auto closePos=close->mapToScene({close->width()/2,close->height()/2});QVERIFY(closePos.x()>0&&closePos.x()<window->width());
+            QVERIFY(window->grabWindow().save(screens+"/editor-information-"+QString::number(size.width())+".png"));
+            auto tab=findVisual(window->contentItem(),"customizationImagesTab");QVERIFY(tab);QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,tab->mapToScene({tab->width()/2,tab->height()/2}).toPoint());QTest::qWait(600);
+            QVERIFY(window->grabWindow().save(screens+"/editor-images-"+QString::number(size.width())+".png"));QVERIFY(QMetaObject::invokeMethod(dialog,"close"));
+        }
+        QCOMPARE(warnings.size(),0);
+    }
+    void localizedDescriptions(){
+        Fixture f;
+        const auto metadata=f.temp.path()+"/dos/metadata";
+        QVERIFY(QDir().mkpath(metadata));
+        auto write=[&](const QString &path,const QJsonObject &object){QFile file(path);if(!file.open(QIODevice::WriteOnly))return false;return file.write(QJsonDocument(object).toJson())>0;};
+        QVERIFY(write(f.temp.path()+"/config/storage.json",{{"dosbox",f.temp.path()+"/dos"},{"embeddedMetadata",true}}));
+        QVERIFY(write(metadata+"/descriptions.es.json",{{Seed,"Un joven quiere convertirse en pirata.\n\nUna aventura en el Caribe."},{"1",""},{"2",42}}));
+        QFile catalog(f.temp.path()+"/data/catalog.json");QVERIFY(catalog.open(QIODevice::ReadOnly));
+        auto original=QJsonDocument::fromJson(catalog.readAll()).object();catalog.close();
+        auto entries=original["games"].toArray();auto first=entries[0].toObject();first["title"]="The Secret of Monkey Island";entries[0]=first;original["games"]=entries;
+        QVERIFY(write(catalog.fileName(),original));
+        Languages languages(f.temp.path(),QStringLiteral(VETUST_SOURCE)+"/../translations");
+        auto reload=[&]{f.backend.reset();QSqlDatabase::removeDatabase("vetust-native");f.backend=std::make_unique<Backend>(f.temp.path());connect(&languages,&Languages::changed,f.backend.get(),&Backend::retranslate);};
+        reload();
+        QCOMPARE(f.backend->selected()["description"].toString(),QString("Descripción de prueba"));
+        QCOMPARE(languages.setLanguage("es"),QString());
+        const QString spanish="Un joven quiere convertirse en pirata.\n\nUna aventura en el Caribe.";
+        QCOMPARE(f.backend->selected()["description"].toString(),spanish);
+        QCOMPARE(f.backend->selected()["summary"].toString(),spanish);
+        QCOMPARE(f.backend->scummArtwork("monkey")["description"].toString(),spanish);
+        for(const auto &value:f.backend->pageGames())if(value.toMap()["id"]!=Seed)
+            QCOMPARE(value.toMap()["description"].toString(),QString("Descripción de prueba"));
+        reload();QCOMPARE(f.backend->selected()["description"].toString(),spanish);
+        QCOMPARE(languages.setLanguage("pt_BR"),QString());
+        QCOMPARE(f.backend->selected()["description"].toString(),QString("Descripción de prueba"));
+        QCOMPARE(languages.setLanguage("es"),QString());
+        QVERIFY(write(metadata+"/descriptions.es_MX.json",{{Seed,"Variante regional"}}));
+        QLocale::setDefault(QLocale("es_MX"));f.backend->retranslate();
+        QCOMPARE(f.backend->selected()["description"].toString(),QString("Variante regional"));
+        QVERIFY(QFile::remove(metadata+"/descriptions.es_MX.json"));
+        QFile broken(metadata+"/descriptions.es.json");QVERIFY(broken.open(QIODevice::WriteOnly));broken.write("{broken");broken.close();
+        QTest::ignoreMessage(QtWarningMsg,qPrintable(QString("Invalid descriptions: \"%1/descriptions.es.json\"").arg(metadata)));
+        f.backend->retranslate();QCOMPARE(f.backend->selected()["description"].toString(),QString("Descripción de prueba"));
+        QVERIFY(QFile::remove(broken.fileName()));f.backend->retranslate();
+        QCOMPARE(f.backend->selected()["description"].toString(),QString("Descripción de prueba"));
+        QCOMPARE(languages.setLanguage("en"),QString());
+        QVERIFY(catalog.open(QIODevice::ReadOnly));QCOMPARE(QJsonDocument::fromJson(catalog.readAll()).object(),original);
+    }
     void unifiedCatalogPreview(){
         const auto source=qEnvironmentVariable("VETUST_CATALOG_PREVIEW"),shots=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
         if(source.isEmpty()||shots.isEmpty())QSKIP("Vista previa opcional con una instalación local");
@@ -1178,6 +1302,31 @@ ApplicationWindow {
         QTRY_COMPARE(list->property("count").toInt(),1);QVERIFY(!f.backend->selected()["favorite"].toBool());
         QTest::keyClick(window,Qt::Key_Escape);QTRY_VERIFY(!dialog->property("visible").toBool());
         f.backend->selectGame("1");QTRY_VERIFY(!button->isVisible());
+    }
+    void typeToSearch(){
+        Fixture f;LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));
+        QSignalSpy warnings(&engine,&QQmlEngine::warnings);engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());QVERIFY(window);window->requestActivate();QTest::qWait(100);
+        auto search=window->findChild<QQuickItem*>("searchField"),content=window->findChild<QQuickItem*>("browsingContent");QVERIFY(search&&content);
+        QVERIFY(!search->hasActiveFocus());QKeyEvent upper(QEvent::KeyPress,Qt::Key_A,Qt::ShiftModifier,"A");QCoreApplication::sendEvent(window,&upper);QTRY_VERIFY(search->hasActiveFocus());QCOMPARE(search->property("text").toString(),QString("A"));QCOMPARE(window->property("view").toString(),QString("all"));
+        QTest::keyClick(window,Qt::Key_B);QCOMPARE(search->property("text").toString(),QString("Ab"));
+        content->forceActiveFocus();QTest::keyClick(window,Qt::Key_A,Qt::ControlModifier);QVERIFY(!search->hasActiveFocus());QCOMPARE(search->property("text").toString(),QString("Ab"));
+        QTest::keyClick(window,Qt::Key_Left);QVERIFY(!search->hasActiveFocus());
+        search->setProperty("text","");QTest::qWait(200);auto grid=window->findChild<QQuickItem*>("unifiedCatalogGrid");QVERIFY(grid);auto card=qvariant_cast<QQuickItem*>(grid->property("currentItem"));QVERIFY(card);card->forceActiveFocus();
+        QTest::keyClick(window,Qt::Key_M);QTRY_VERIFY(search->hasActiveFocus());QCOMPARE(search->property("text").toString(),QString("m"));
+        // Las secciones mantienen el ámbito de su buscador y los caracteres Unicode.
+        for(const auto &section:{"favorites","recent","scummvm","atari","arcade","magazines"}){
+            QVERIFY(QMetaObject::invokeMethod(window,"navigate",Q_ARG(QVariant,QString(section))));content->forceActiveFocus();
+            QKeyEvent accented(QEvent::KeyPress,Qt::Key_unknown,Qt::NoModifier,QString::fromUtf8("ñ"));QCoreApplication::sendEvent(window,&accented);
+            QVERIFY(search->hasActiveFocus());QCOMPARE(search->property("text").toString(),QString::fromUtf8("ñ"));QCOMPARE(window->property("view").toString(),QString(section));
+        }
+        QVERIFY(QMetaObject::invokeMethod(window,"openGame",Q_ARG(QVariant,Seed)));QTest::qWait(100);
+        const auto favorite=f.backend->selected()["favorite"].toBool();
+        auto editor=window->findChild<QObject*>("gameCustomizationDialog");QVERIFY(editor);QVERIFY(QMetaObject::invokeMethod(editor,"begin",Q_ARG(QVariant,Seed)));QTest::qWait(100);
+        auto title=findVisual(window->contentItem(),"customField_title");QVERIFY(title);title->forceActiveFocus();QTest::keyClick(window,Qt::Key_End);QTest::keyClick(window,Qt::Key_F);
+        QVERIFY(title->hasActiveFocus());QVERIFY(title->property("text").toString().endsWith("f"));QCOMPARE(f.backend->selected()["favorite"].toBool(),favorite);QCOMPARE(search->property("text").toString(),QString::fromUtf8("ñ"));
+        QVERIFY(QMetaObject::invokeMethod(editor,"close"));QTest::qWait(100);QTest::keyClick(window,Qt::Key_A);QVERIFY(!search->hasActiveFocus());
+        QCOMPARE(warnings.size(),0);
     }
     void uiSearchAndDetails(){
         Fixture f;LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",f.backend.get());engine.addImageProvider("art",new ArtProvider(f.temp.path(),{}));

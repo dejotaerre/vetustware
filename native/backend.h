@@ -48,7 +48,7 @@ class Backend : public QObject {
     Q_PROPERTY(int count READ count NOTIFY changed)
     Q_PROPERTY(int page READ page NOTIFY changed)
     Q_PROPERTY(int pages READ pages NOTIFY changed)
-    Q_PROPERTY(QStringList genres READ genres CONSTANT)
+    Q_PROPERTY(QStringList genres READ genres NOTIFY changed)
     Q_PROPERTY(bool nortonAvailable READ nortonAvailable NOTIFY storageChanged)
     Q_PROPERTY(bool xTreeAvailable READ xTreeAvailable NOTIFY storageChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY statusChanged)
@@ -93,6 +93,9 @@ public:
     Q_INVOKABLE void toggleFavorite();
     Q_INVOKABLE void play();
     Q_INVOKABLE void openGameFolder();
+    Q_INVOKABLE QVariantMap gameCustomization(const QString &id) const;
+    Q_INVOKABLE QString saveGameCustomization(const QString &id,const QVariantMap &draft);
+    Q_INVOKABLE QString resetGameCustomization(const QString &id);
     Q_INVOKABLE void openConsole(const QString &fileManager=QString());
     bool xTreeAvailable() const;
     bool nortonAvailable() const;
@@ -141,6 +144,13 @@ private:
     void rebuildHome();
     void launch(bool console,const QString &fileManager=QString());
     void loadCatalog();
+    void loadDescriptions();
+    QString description(const QJsonObject &game) const;
+    QJsonObject translatedDescriptions;
+    QHash<QString,QJsonObject> originalGames,customGames;
+    void applyCustomizations();
+    void refreshCustomizations();
+    QString originalDescription(const QJsonObject &game,const QString &language) const;
     void restorePrepared(const QJsonObject &profile,const QString &readyPath,const std::function<void(int)> &callback);
     void restoreTools();
     QString root;Storage storage;QString library,gamesRoot;

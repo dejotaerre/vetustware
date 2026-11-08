@@ -68,6 +68,32 @@ Example excerpt (a complete file has many more messages):
 
 ## For developers
 
+### Library descriptions
+
+DOS game descriptions can be translated independently of interface messages.
+Keep the original `description` in `catalog.json` unchanged and place a UTF-8
+JSON file named `descriptions.es.json` in the DOS collection's `metadata/`
+directory. The file is an object mapping stable game UUIDs to translated text:
+
+```json
+{
+  "game-uuid-from-catalog": "Translated description.\n\nAnother paragraph."
+}
+```
+
+The interface language selects this file. For example, Spanish uses `es`;
+Brazilian Portuguese loads `descriptions.pt.json` if present and then applies
+`descriptions.pt_BR.json` overrides. Missing, blank, non-string or malformed
+translations fall back to the original description. English always uses the
+original. Files are loaded at startup, on library changes and when switching
+interface language. Reopen the app after editing a file externally.
+
+The same descriptions are used for linked ScummVM entries. Existing short
+editorial summaries remain separate; the full description is available in the
+game details. These JSON files travel with the collection, not the application
+package, and do not change game language, profiles or saves. If the collection
+is disconnected, the cached original description remains available.
+
 Use English source messages:
 
 ```qml

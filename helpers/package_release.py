@@ -13,16 +13,16 @@ import tempfile
 import time
 
 VERSION = '0.3.4'
-NATIVE = '''CMakeLists.txt PdfReader.qml Main.qml CatalogView.qml BackgroundsDialog.qml LibraryBackdrop.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml ScummView.qml
+NATIVE = '''CMakeLists.txt PdfReader.qml Main.qml GameCustomizationDialog.qml CatalogView.qml BackgroundsDialog.qml LibraryBackdrop.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml ScummView.qml
 RuntimesDialog.qml runtimes.cpp runtimes.h ArcadeView.qml arcade.cpp arcade.h arcade_tests.cpp
 assets/scummvm-header.png assets/atari2600-header.png assets/arcade-header.png assets/retro-library.jpg assets/magazines.jpg
 scummvm.cpp scummvm.h scummvm_tests.cpp AtariView.qml atari.cpp atari.h atari_tests.cpp
-archive.cpp archive.h archive_tests.cpp backend.cpp backend.h backend_magazines.cpp
+archive.cpp archive.h archive_tests.cpp backend.cpp backend.h backend_customization.cpp backend_magazines.cpp
 magazines.cpp magazines.h magazines_tests.cpp displays.cpp displays.h
 emulation.cpp emulation.h emulation_tests.cpp home.cpp home_tests.cpp main.cpp
 storage.cpp storage.h librarylayout.h extras.cpp extras.h extras_tests.cpp icon.svg i18n.cpp i18n.h i18n_tests.cpp'''.split()
 HELPERS = ['library_layout.py', 'library_layout_tests.py', 'install.py', 'catalog_index.py', 'import_library.py', 'package_release.py', 'check_translations.py', 'atari_index.py', 'atari_index_tests.py', 'mame_index.py', 'mame_launch.py', 'mame_tests.py', 'runtime_manager.py', 'runtime_package.py', 'runtime_manager_tests.py']
-DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'INSTALLATION.md', 'CHANGELOG.md', 'CHANGELOG.es.md', 'THIRD_PARTY.es.md', 'docs/LIBRARIES.md', 'docs/BIBLIOTECAS.md', 'docs/TRANSLATING.md', 'docs/RUNTIMES.md', 'docs/ARCADE.md']
+DOCS = ['LICENSE', 'THIRD_PARTY.md', 'INSTALACION.md', 'INSTALLATION.md', 'CHANGELOG.md', 'CHANGELOG.es.md', 'THIRD_PARTY.es.md', 'docs/LIBRARIES.md', 'docs/BIBLIOTECAS.md', 'docs/TRANSLATING.md', 'docs/CUSTOMIZING.md', 'docs/RUNTIMES.md', 'docs/ARCADE.md']
 
 
 def sha(path):

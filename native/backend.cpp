@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QLocale>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDateTime>
@@ -40,7 +41,9 @@ QImage ArtProvider::requestImage(const QString &identifier,QSize *size,const QSi
         QImage img(path);
         if(img.isNull()){
             QByteArray data;
-            {QMutexLocker lock(&mutex);const QString path=Storage(root).sharedPath("metadata/dosbox/recursos.zip","Content/XODOSMetadata.zip");if(!zip||zipPath!=path){zip=std::make_unique<Archive>(path);zipPath=path;}data=zip->read(asset);}
+            if(QUrl(asset).isLocalFile()){
+                QFile file(QUrl(asset).toLocalFile());if(!file.open(QIODevice::ReadOnly))return {};data=file.readAll();
+            }else{QMutexLocker lock(&mutex);const QString path=Storage(root).sharedPath("metadata/dosbox/recursos.zip","Content/XODOSMetadata.zip");if(!zip||zipPath!=path){zip=std::make_unique<Archive>(path);zipPath=path;}data=zip->read(asset);}
             img.loadFromData(data);if(img.isNull())return {};
             img=img.scaled(width,width,Qt::KeepAspectRatio,Qt::SmoothTransformation);
             QDir().mkpath(QFileInfo(path).absolutePath());QSaveFile output(path);
@@ -142,6 +145,7 @@ Backend::Backend(QString r,QObject *parent):QObject(parent),root(r),storage(r),l
     selectedId="67bdc1a5-86ff-4cc8-a8e1-293a97de6e95";rebuildHome();refresh();
 }
 void Backend::loadCatalog(){
+    loadDescriptions();
     atariLibrary->setLibrary(library,storage.metadataDirectory("atari2600"));
     arcadeLibrary->setLibrary(library,storage.metadataDirectory("mame"));
     scummLibrary->setLibrary(library,storage.data["scummvm"].toString(),storage.metadataDirectory("scummvm"));
@@ -157,8 +161,13 @@ void Backend::loadCatalog(){
         catalog=document("catalog.json");assetMap=catalog["assets"].toObject();
         profiles=document("original-profiles.json");spanishProfiles=document("spanish-profiles.json");
     }
+    originalGames.clear();
+    for(const auto &v:catalog["games"].toArray())originalGames.insert(v.toObject()["id"].toString(),v.toObject());
+    applyCustomizations();
     for(const auto &v:catalog["games"].toArray()){
-        auto g=v.toObject();indexes[g["id"].toString()]=games.size();games<<g;
+        auto g=v.toObject();const auto custom=customGames.value(g["id"].toString());
+        const auto fields=custom["fields"].toObject();for(auto it=fields.begin();it!=fields.end();++it)g[it.key()]=it.value();
+        indexes[g["id"].toString()]=games.size();games<<g;
         QString haystack=g["title"].toString()+" "+g["developer"].toString()+" "+g["year"].toString();
         for(const auto &alias:g["aliases"].toArray())haystack+=" "+alias.toString();searches[g["id"].toString()]=fold(haystack);
         for(const auto &genre:g["genre"].toString().split(';',Qt::SkipEmptyParts))if(!genreList.contains(genre))genreList<<genre;
@@ -171,6 +180,7 @@ void Backend::refreshMonitors(){
 }
 QVariantMap Backend::publicGame(const QJsonObject &g) const{
     QVariantMap m=g.toVariantMap();const QString id=g["id"].toString();auto p=profiles[id].toObject();
+    m["description"]=description(g);
     m["favorite"]=favorites.value(id);m["tested"]=p["tested"].toBool();m["playable"]=!p["config"].toString().isEmpty()&&!p["archive"].toString().isEmpty();
     const QString engine=emulation.engine(id);
     const bool customized=engine!="staging"||!emulation.overrides(id,engine).isEmpty()||!emulation.data["paths"].toObject()[engine].toString().isEmpty();
@@ -180,10 +190,11 @@ QVariantMap Backend::publicGame(const QJsonObject &g) const{
     m["spanishAvailable"]=hasSpanish||p["language"].toString()=="es";m["hasSpanish"]=hasSpanish;m["spanish"]=hasSpanish&&spanishPreference.value(id,true);
     if(m["spanish"].toBool()){m["tested"]=false;m["profileLabel"]=EmulationSettings::name(engine)+uiText(" · Spanish · Separate saves");}
     const QString folder=g["folder"].toString();
-    if(folder=="mi1")m["summary"]=uiText("Become a pirate with Guybrush Threepwood. Explore the Caribbean, solve puzzles and face the fearsome LeChuck in an adventure full of humor.");
+    if(customGames.value(id)["descriptions"].toObject().contains(QLocale().name())||customGames.value(id)["descriptions"].toObject().contains(QLocale().name().section('_',0,0)))m["summary"]=m["description"];
+    else if(folder=="mi1")m["summary"]=uiText("Become a pirate with Guybrush Threepwood. Explore the Caribbean, solve puzzles and face the fearsome LeChuck in an adventure full of humor.");
     else if(folder=="Ppersia")m["summary"]=uiText("One hour to escape the dungeons and rescue the princess. Dodge traps, master every jump and face the guards in this classic of rotoscoped animation.");
     else if(folder=="DOOM")m["summary"]=uiText("The moons of Mars have opened the gates of hell. Explore an invaded base and survive its demons in this id Software classic.");
-    else m["summary"]=g["description"].toString();
+    else m["summary"]=m["description"];
     return m;
 }
 QVariantMap Backend::selected() const{return indexes.contains(selectedId)?publicGame(games[indexes[selectedId]]):QVariantMap{};}
@@ -674,8 +685,38 @@ void Backend::setSpanish(bool enabled){
 }
 
 void Backend::retranslate(){
+    loadDescriptions();
     rebuildHome();refresh();emit selectionChanged();emit settingsChanged();
     if(!active)dismissStatus();
+}
+
+void Backend::loadDescriptions(){
+    translatedDescriptions={};
+    const auto directory=storage.metadataDirectory("dosbox");
+    if(directory.isEmpty())return;
+    const auto locale=QLocale().name();
+    const auto language=locale.section('_',0,0);
+    if(language=="en"||language=="C")return;
+    // El idioma general aporta la base; la variante regional puede completarla.
+    QStringList codes{language};if(locale!=language)codes<<locale;
+    for(const auto &code:codes){
+        QFile file(directory+"/descriptions."+code+".json");
+        if(!file.exists())continue;
+        if(file.size()>16*1024*1024||!file.open(QIODevice::ReadOnly)){qWarning()<<"Cannot read descriptions:"<<file.fileName();continue;}
+        const auto doc=QJsonDocument::fromJson(file.readAll());
+        if(!doc.isObject()){qWarning()<<"Invalid descriptions:"<<file.fileName();continue;}
+        const auto entries=doc.object();
+        for(auto it=entries.begin();it!=entries.end();++it)
+            if(it.value().isString()&&!it.value().toString().trimmed().isEmpty())translatedDescriptions[it.key()]=it.value();
+    }
+}
+
+QString Backend::description(const QJsonObject &game) const{
+    const auto custom=customGames.value(game["id"].toString())["descriptions"].toObject();
+    const auto locale=QLocale().name();
+    if(custom.contains(locale))return custom[locale].toString();
+    if(custom.contains(locale.section('_',0,0)))return custom[locale.section('_',0,0)].toString();
+    return translatedDescriptions.value(game["id"].toString()).toString(game["description"].toString());
 }
 
 QVariantMap Backend::scummArtwork(const QString &gameId) const{
@@ -691,6 +732,6 @@ QVariantMap Backend::scummArtwork(const QString &gameId) const{
     };
     const auto title=titles.value(gameId);
     if(title.isEmpty())return {};
-    for(const auto &game:games)if(game["title"].toString()==title)return game.toVariantMap();
+    for(const auto &game:originalGames)if(game["title"].toString()==title){auto result=game.toVariantMap();result["description"]=translatedDescriptions.value(game["id"].toString()).toString(game["description"].toString());return result;}
     return {};
 }

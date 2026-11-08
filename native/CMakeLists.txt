@@ -7,8 +7,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
 pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 qt_standard_project_setup(REQUIRES 6.5)
-qt_add_executable(vetust i18n.cpp i18n.h main.cpp backend.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h home.cpp backend.h displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
-qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES PdfReader.qml Main.qml CatalogView.qml BackgroundsDialog.qml LibraryBackdrop.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml ScummView.qml AtariView.qml ArcadeView.qml RuntimesDialog.qml
+qt_add_executable(vetust i18n.cpp i18n.h main.cpp backend.cpp backend_customization.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h home.cpp backend.h displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
+qt_add_qml_module(vetust URI Vetust VERSION 1.0 QML_FILES PdfReader.qml Main.qml GameCustomizationDialog.qml CatalogView.qml BackgroundsDialog.qml LibraryBackdrop.qml EmulatorDialog.qml StorageDialog.qml ExtrasDialog.qml MagazinesView.qml ScummView.qml AtariView.qml ArcadeView.qml RuntimesDialog.qml
     RESOURCES assets/scummvm-header.png assets/atari2600-header.png assets/arcade-header.png assets/retro-library.jpg assets/magazines.jpg)
 target_link_libraries(vetust PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Sql Qt6::Concurrent Qt6::PdfQuick PkgConfig::LIBZIP PkgConfig::SDL2)
 
@@ -31,7 +31,7 @@ target_link_libraries(emulation_tests PRIVATE Qt6::Core PkgConfig::SDL2)
 add_test(NAME ajustes_emuladores COMMAND emulation_tests)
 
 find_package(Qt6 REQUIRED COMPONENTS Test)
-qt_add_executable(home_tests i18n.cpp i18n.h home_tests.cpp backend.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h backend.h home.cpp displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
+qt_add_executable(home_tests i18n.cpp i18n.h home_tests.cpp backend.cpp backend_customization.cpp backend_magazines.cpp runtimes.cpp runtimes.h scummvm.cpp scummvm.h atari.cpp atari.h arcade.cpp arcade.h magazines.cpp magazines.h backend.h home.cpp displays.cpp displays.h storage.cpp storage.h emulation.cpp emulation.h archive.cpp archive.h extras.cpp extras.h)
 target_link_libraries(home_tests PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Sql Qt6::Concurrent Qt6::PdfQuick Qt6::Test PkgConfig::LIBZIP PkgConfig::SDL2)
 target_compile_definitions(home_tests PRIVATE VETUST_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME portada_y_navegacion COMMAND home_tests)
