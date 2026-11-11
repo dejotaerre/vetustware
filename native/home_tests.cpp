@@ -211,6 +211,27 @@ private slots:
         QCOMPARE(languages.setLanguage("en"),QString());
         QVERIFY(catalog.open(QIODevice::ReadOnly));QCOMPARE(QJsonDocument::fromJson(catalog.readAll()).object(),original);
     }
+    void scummDetailsPreview(){
+        const auto library=qEnvironmentVariable("VETUST_SCUMM_PREVIEW"),screens=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
+        if(library.isEmpty()||screens.isEmpty())QSKIP("Vista previa opcional sin biblioteca DOS conectada");
+        QTemporaryDir temp;QDir().mkpath(temp.path()+"/config");
+        const auto write=[](const QString &p,const QByteArray &d){QFile f(p);if(!f.open(QIODevice::WriteOnly))qFatal("No se pudo preparar la prueba");f.write(d);};
+        write(temp.path()+"/config/storage.json",QJsonDocument(QJsonObject{{"scummvm",library},{"embeddedMetadata",true}}).toJson());
+        write(temp.path()+"/config/scummvm.ini",ScummLibrary::serialize({{"preview",{{"gameid","monkey2"},{"path",library+"/Monkey2"},{"description","Monkey Island 2: LeChuck's Revenge (DOS/Spanish)"}}}}));
+        Backend backend(temp.path());LocalizedEngine engine;engine.rootContext()->setContextProperty("vetust",&backend);engine.addImageProvider("art",new ArtProvider(temp.path(),{}));engine.languages.setLanguage("es");
+        QSignalSpy warnings(&engine,&QQmlEngine::warnings);engine.load(QUrl::fromLocalFile(QStringLiteral(VETUST_SOURCE)+"/Main.qml"));QVERIFY(!engine.rootObjects().isEmpty());
+        auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());window->setProperty("view","scummvm");QTest::qWait(150);
+        auto page=window->findChild<QObject*>("scummView");QVERIFY(page);
+        QVariant row;for(const auto &v:backend.scumm()->games())if(v.toMap()["folder"]=="Monkey2")row=v;QVERIFY(row.isValid());
+        for(const auto size:{QSize(1480,920),QSize(1050,720)}){
+            window->resize(size);QVERIFY(QMetaObject::invokeMethod(page,"showGame",Q_ARG(QVariant,row)));QTest::qWait(500);
+            const auto metadata=page->property("metadata").toMap();QVERIFY(metadata["box3d"].toString().startsWith("file:"));QVERIFY(metadata["shots"].toList().size()>0);
+            QVERIFY(window->grabWindow().save(screens+"/scumm-details-"+QString::number(size.width())+".png"));
+            auto button=window->findChild<QObject*>("scummFullDescription");QVERIFY(button);QVERIFY(QMetaObject::invokeMethod(button,"clicked"));QTest::qWait(100);
+            auto dialog=window->findChild<QObject*>("scummDescriptionDialog");QVERIFY(dialog->property("visible").toBool());QVERIFY(QMetaObject::invokeMethod(dialog,"close"));
+        }
+        QCOMPARE(backend.catalogCount(),0);QCOMPARE(warnings.size(),0);
+    }
     void unifiedCatalogPreview(){
         const auto source=qEnvironmentVariable("VETUST_CATALOG_PREVIEW"),shots=qEnvironmentVariable("VETUST_SCREENSHOT_DIR");
         if(source.isEmpty()||shots.isEmpty())QSKIP("Vista previa opcional con una instalación local");

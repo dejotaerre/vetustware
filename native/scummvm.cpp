@@ -192,7 +192,10 @@ QVariantList ScummLibrary::games() const{
         if(!selected.isEmpty()){
             for(const auto &variant:variants)if(variant.toMap()["target"]==selected){first=variant.toMap();break;}
         }else if(differentGames)first={};
-        result<<QVariantMap{{"folder",folder},{"hidden",hidden.contains(folder)},{"title",first.value("title",folder).toString().section(" (",0,0)},{"gameId",first.value("gameId")},{"variants",variants},{"target",selected},{"cover",localMedia(folder,{"portada.jpg","cover.jpg","portada.png","cover.png"})},{"manual",localMedia(folder,{"manual.pdf"})}};
+        const auto metadata=gameMetadata(folder,first.value("gameId").toString());
+        const auto cover=localMedia(folder,{"portada.jpg","cover.jpg","portada.png","cover.png"});
+        const auto manual=localMedia(folder,{"manual.pdf"});
+        result<<QVariantMap{{"folder",folder},{"hidden",hidden.contains(folder)},{"title",first.value("title",folder).toString().section(" (",0,0)},{"gameId",first.value("gameId")},{"variants",variants},{"target",selected},{"cover",cover.isEmpty()?metadata.value("cover").toString():cover},{"manual",manual.isEmpty()?metadata.value("manual").toString():manual},{"year",metadata.value("year")},{"developer",metadata.value("developer")}};
     }
     // La configuración regional C no admite comparación numérica en QCollator.
     QCollator collator(QLocale().language()==QLocale::C?QLocale(QLocale::English):QLocale());
@@ -261,9 +264,32 @@ QString ScummLibrary::localMedia(const QString &folder,const QStringList &names)
     }
     return {};
 }
+QVariantMap ScummLibrary::gameMetadata(const QString &folder,const QString &gameId) const{
+    if(gameId.isEmpty())return {};
+    const auto url=localMedia(folder,{"game.json"});if(url.isEmpty())return {};
+    QFile file(QUrl(url).toLocalFile());if(!file.open(QIODevice::ReadOnly)||file.size()>2*1024*1024)return {};
+    const auto document=QJsonDocument::fromJson(file.readAll()).object();
+    if(document["format"].toInt()!=1)return {};
+    const auto record=document["games"].toObject()[gameId].toObject();if(record.isEmpty())return {};
+    QVariantMap result;
+    for(const auto &key:{"title","year","developer","publisher","genre"})if(record[key].isString())result[key]=record[key].toString();
+    const auto descriptions=record["descriptions"].toObject();const auto locale=QLocale().name();
+    QString description=descriptions["en"].toString();
+    for(const auto &key:QStringList{locale.section('_',0,0),locale})if(descriptions[key].isString()&&!descriptions[key].toString().trimmed().isEmpty())description=descriptions[key].toString();
+    result["description"]=description;
+    const auto directory=QFileInfo(file).absolutePath();
+    // Solo se sirven recursos existentes dentro de la carpeta de metadatos del juego.
+    auto media=[&](const QString &relative){
+        if(relative.isEmpty()||QDir::isAbsolutePath(relative)||relative.contains('\\'))return QString();
+        const auto path=QDir(directory).filePath(relative);
+        return QFileInfo(path).isFile()&&!relativePath(directory,path).isEmpty()?QUrl::fromLocalFile(path).toString():QString();
+    };
+    for(const auto &key:{"cover","box3d","background","manual"})result[key]=media(record[key].toString());
+    QVariantList shots;for(const auto &value:record["shots"].toArray()){const auto path=media(value.toString());if(!path.isEmpty())shots<<path;}result["shots"]=shots;
+    result["referenceImages"]=record["source"].toObject()["engine"].toString()=="dosbox";
+    return result;
+}
 void ScummLibrary::openManual(const QString &folder){
     if(running||(blocked&&blocked()))return;
-    const auto url=localMedia(folder,{"manual.pdf"});
-    if(url.isEmpty())return;
-    for(const auto &entry:games())if(entry.toMap()["folder"]==folder){emit manualReady(QUrl(url),uiText("Manual · ")+entry.toMap()["title"].toString());return;}
+    for(const auto &entry:games())if(entry.toMap()["folder"]==folder){const auto url=entry.toMap()["manual"].toString();if(!url.isEmpty())emit manualReady(QUrl(url),uiText("Manual · ")+entry.toMap()["title"].toString());return;}
 }

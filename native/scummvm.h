@@ -22,6 +22,7 @@ public:
     void setLibrary(const QString &library,const QString &folder=QString(),const QString &metadata=QString());
     std::function<bool()> blocked;
     QVariantList games() const;
+    Q_INVOKABLE QVariantMap gameMetadata(const QString &folder,const QString &gameId) const;
     bool busy() const { return running || scanning; }
     bool available() const;
     QString status() const { return message; }

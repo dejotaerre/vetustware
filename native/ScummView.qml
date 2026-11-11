@@ -9,11 +9,22 @@ ColumnLayout {
     property bool showHidden: false
     property bool detailsOpen: details.visible
     property var selected: ({})
-    property var metadata: { languages.current; return vetust.scummArtwork(selected.gameId || "") }
+    readonly property string metadataGameId: (variants.find(v=>v.target===target) || {}).gameId || selected.gameId || ""
+    property var metadata: {
+        languages.current
+        const local=vetust.scumm.gameMetadata(selected.folder || "",metadataGameId)
+        return Object.keys(local).length ? local : vetust.scummArtwork(metadataGameId)
+    }
+    property int shotIndex: 0
+    readonly property var shots: metadata.shots || []
+    readonly property string cover: selected.cover || media(metadata.cover)
+    readonly property string shot: shots.length ? media(shots[Math.min(shotIndex,shots.length-1)]) : ""
+    function media(ref) { return !ref ? "" : ref.startsWith("file:") || ref.startsWith("image:") ? ref : "image://art/"+ref }
+    onMetadataChanged: shotIndex=0
     property var variants: selected.variants || []
     property string target: selected.target || ""
     spacing: 16
-    function showGame(entry) { selected=entry; target=entry.target || ""; details.open() }
+    function showGame(entry) { selected=entry; target=entry.target || ""; shotIndex=0; details.open() }
     Connections {
         target: vetust.scumm
         function onChanged() {
@@ -109,7 +120,7 @@ ColumnLayout {
     }
     Dialog {
         id: details; objectName: "scummDetails"
-        background: LibraryBackdrop { source: page.selected.cover || (page.metadata.cover ? "image://art/"+page.metadata.cover : "") }
+        background: LibraryBackdrop { source: page.media(page.metadata.background) || page.cover }
         parent: Overlay.overlay; x: 0; y: 0; width: parent.width; height: parent.height; margins: 0
         modal: true; focus: true; title: page.selected.title || "ScummVM"
         palette.window: "#101c27"; palette.windowText: "#e9bd79"; palette.button: "#1b2d3b"; palette.buttonText: "#e7edf1"
@@ -130,30 +141,33 @@ ColumnLayout {
             }
         }
         contentItem: RowLayout {
-            spacing: 24
-            Image { Layout.preferredWidth: 220; Layout.fillHeight: true; source: page.selected.cover || (page.metadata.cover ? "image://art/"+page.metadata.cover : ""); fillMode: Image.PreserveAspectFit; asynchronous: true; sourceSize.width: 480; visible: !!page.selected.cover || !!page.metadata.cover
-                MouseArea {
-                    objectName: "scummDetailPlayImage"
-                    anchors.fill: parent; enabled: playScummButton.enabled
-                    cursorShape: Qt.PointingHandCursor; hoverEnabled: true
-                    ToolTip.text: playScummButton.text; ToolTip.visible: containsMouse && enabled
-                    onClicked: playScummButton.clicked()
-                }
-            }
+            spacing: details.width<1200 ? 20 : 32
             ColumnLayout {
-                Layout.fillWidth: true; spacing: 16
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { Layout.fillWidth: true; text: page.selected.folder || ""; textFormat: Text.PlainText; wrapMode: Text.WordWrap; color: "#78d8d1" }
-                    Button {
-                        objectName: "hideScummGame"
-                        text: page.selected.hidden ? qsTranslate("Vetust", "Unhide game") : qsTranslate("Vetust", "Hide game")
-                        enabled: !vetust.busy
-                        onClicked: {vetust.scumm.setHidden(page.selected.folder,!page.selected.hidden);details.close()}
+                Layout.preferredWidth: Math.min(260,details.width*0.18); Layout.fillHeight: true
+                Item { Layout.fillHeight: true }
+                Image {
+                    Layout.fillWidth: true; Layout.preferredHeight: Math.min(420,details.height-170)
+                    source: page.media(page.metadata.box3d) || page.cover
+                    fillMode: Image.PreserveAspectFit; asynchronous: true; sourceSize.width: 650
+                    MouseArea {
+                        objectName: "scummDetailPlayImage"
+                        anchors.fill: parent; enabled: playScummButton.enabled
+                        cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                        ToolTip.text: playScummButton.text; ToolTip.visible: containsMouse && enabled
+                        onClicked: playScummButton.clicked()
                     }
                 }
-                Label { Layout.fillWidth: true; text: page.metadata.description || qsTranslate("Vetust", "This edition runs directly in ScummVM."); textFormat: Text.PlainText; wrapMode: Text.WordWrap; maximumLineCount: 7; elide: Text.ElideRight; color: "#a8bac8" }
-                Label { Layout.fillWidth: true; visible: page.variants.length>1; text: qsTranslate("Vetust", "ScummVM found several possible editions. Choose the one that matches your files."); color: "#e9bd79"; wrapMode: Text.WordWrap }
+                Item { Layout.fillHeight: true }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true; Layout.preferredWidth: 430; Layout.minimumWidth: 290; spacing: 12
+                Label { text: "SCUMMVM"+(page.metadata.year ? "     —     "+page.metadata.year : ""); color: "#78d8d1"; font.pixelSize: 11; font.letterSpacing: 2 }
+                Label { Layout.fillWidth: true; text: page.metadata.title || page.selected.title || ""; textFormat: Text.PlainText; color: "#f1d3a0"; font.family: "Noto Serif"; font.pixelSize: details.width<1200 ? 27 : 34; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                Label { Layout.fillWidth: true; visible: !!text; text: page.metadata.developer || page.metadata.publisher || ""; color: "#c2cbd2"; textFormat: Text.PlainText; wrapMode: Text.WordWrap }
+                Label { Layout.fillWidth: true; visible: !!text; text: (page.metadata.genre || "").split(";").map(g=>qsTranslate("Vetust", g)).join(" · "); color: "#91a3b3"; textFormat: Text.PlainText; wrapMode: Text.WordWrap; font.pixelSize: 12 }
+                Label { Layout.fillWidth: true; text: page.metadata.description || qsTranslate("Vetust", "This edition runs directly in ScummVM."); textFormat: Text.PlainText; wrapMode: Text.WordWrap; maximumLineCount: details.height<800 ? 4 : 6; elide: Text.ElideRight; color: "#a8bac8"; font.pixelSize: 13; lineHeight: 1.25 }
+                Button { objectName: "scummFullDescription"; visible: !!page.metadata.description; text: qsTranslate("Vetust", "Read full details ↗"); flat: true; palette.buttonText: "#e9bd79"; onClicked: descriptionDialog.open() }
+                Label { Layout.fillWidth: true; visible: page.variants.length>1; text: qsTranslate("Vetust", "ScummVM found several possible editions. Choose the one that matches your files."); color: "#e9bd79"; font.pixelSize: 12; wrapMode: Text.WordWrap }
                 ComboBox {
                     id: choice; objectName: "scummEdition"
                     Layout.fillWidth: true; visible: page.variants.length>0; enabled: !vetust.busy
@@ -163,14 +177,64 @@ ColumnLayout {
                     onActivated: {page.target=currentValue;vetust.scumm.choose(currentValue)}
                 }
                 Label { visible: !page.variants.length; Layout.fillWidth: true; text: qsTranslate("Vetust", "ScummVM did not recognize this folder. Check its files or use the ScummVM manager."); wrapMode: Text.WordWrap; color: "#e9bd79" }
-                Item { Layout.fillHeight: true }
-                RowLayout {
-                    Button { id: playScummButton; objectName: "playScummVM"; text: qsTranslate("Vetust", "Play in ScummVM →"); enabled: !!page.target && !vetust.busy && vetust.scumm.available; onClicked: {vetust.scumm.play(page.target);details.close()} }
+                Flow {
+                    Layout.fillWidth: true; spacing: 8
+                    Button { id: playScummButton; objectName: "playScummVM"; text: qsTranslate("Vetust", "Play in ScummVM →"); highlighted: true; palette.highlight: "#78d8d1"; palette.highlightedText: "#101c27"; enabled: !!page.target && !vetust.busy && vetust.scumm.available; onClicked: {vetust.scumm.play(page.target);details.close()} }
                     Button { objectName: "scummManual"; text: qsTranslate("Vetust", "▤  Manual"); visible: !!page.selected.manual; enabled: !vetust.busy; onClicked: vetust.scumm.openManual(page.selected.folder) }
                     Button { text: qsTranslate("Vetust", "Open folder"); onClicked: vetust.scumm.openFolder(page.selected.folder) }
+                    Button { objectName: "hideScummGame"; text: page.selected.hidden ? qsTranslate("Vetust", "Unhide game") : qsTranslate("Vetust", "Hide game"); enabled: !vetust.busy; onClicked: {vetust.scumm.setHidden(page.selected.folder,!page.selected.hidden);details.close()} }
                 }
                 Label { Layout.fillWidth: true; text: qsTranslate("Vetust", "Use Manage in ScummVM to change graphics, sound and game options."); color: "#91a3b3"; wrapMode: Text.WordWrap; font.pixelSize: 11 }
             }
+            ColumnLayout {
+                visible: page.shots.length>0; Layout.preferredWidth: Math.min(details.width*0.36,620); spacing: 14
+                Rectangle {
+                    Layout.fillWidth: true; Layout.preferredHeight: width*0.75; color: "#03070a"; radius: 6; border.color: "#34404b"
+                    Image { objectName: "scummScreenshot"; anchors.fill: parent; anchors.margins: 6; source: page.shot; fillMode: Image.PreserveAspectFit; asynchronous: true; sourceSize.width: 1200 }
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: galleryDialog.open() }
+                    Label { anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 10; text: "⛶"; color: "#b9cbd6" }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label { text: (page.shots.length ? page.shotIndex+1 : 0)+" / "+page.shots.length; color: "#91a3b3"; font.pixelSize: 11 }
+                    Item { Layout.fillWidth: true }
+                    Repeater { model: page.shots.slice(0,4)
+                        delegate: Rectangle {
+                            required property string modelData; required property int index
+                            width: 52; height: 40; color: "#0b151e"; radius: 3; border.color: page.shotIndex===index ? "#e9bd79" : "#34404b"
+                            Image { anchors.fill: parent; anchors.margins: 3; source: page.media(modelData); fillMode: Image.PreserveAspectFit; asynchronous: true; sourceSize.width: 180 }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: page.shotIndex=index }
+                        }
+                    }
+                    ToolButton { visible: page.shots.length>1; text: "→"; onClicked: page.shotIndex=(page.shotIndex+1)%page.shots.length }
+                }
+                Label { Layout.fillWidth: true; visible: !!page.metadata.referenceImages; text: qsTranslate("Vetust", "Reference images · DOS edition"); color: "#91a3b3"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+            }
         }
+    }
+    Dialog {
+        id: descriptionDialog; objectName: "scummDescriptionDialog"
+        parent: Overlay.overlay; anchors.centerIn: parent; width: Math.min(850,parent.width-40); height: Math.min(700,parent.height-40); modal: true; focus: true
+        palette.window: "#101c27"; palette.windowText: "#e7edf1"; background: Rectangle { color: "#101c27"; border.color: "#34404b" }
+        header: RowLayout {
+            Label { Layout.fillWidth: true; Layout.margins: 14; text: page.metadata.title || page.selected.title || ""; textFormat: Text.PlainText; color: "#e9bd79"; elide: Text.ElideRight }
+            ToolButton { text: "×"; font.pixelSize: 26; Accessible.name: qsTranslate("Vetust", "Close"); onClicked: descriptionDialog.close() }
+        }
+        contentItem: ScrollView { id: descriptionScroll; clip: true; contentWidth: availableWidth
+            TextArea { width: descriptionScroll.availableWidth; text: page.metadata.description || ""; textFormat: TextEdit.PlainText; wrapMode: TextEdit.Wrap; readOnly: true; selectByMouse: true; color: "#d3dde5"; font.pixelSize: 15 }
+        }
+    }
+    Dialog {
+        id: galleryDialog; objectName: "scummGalleryDialog"
+        parent: Overlay.overlay; x: 0; y: 0; width: parent.width; height: parent.height; margins: 0; modal: true; focus: true
+        background: Rectangle { color: "#080f17" }
+        header: RowLayout {
+            ToolButton { text: "←"; enabled: page.shotIndex>0; onClicked: page.shotIndex-- }
+            Label { text: (page.shotIndex+1)+" / "+page.shots.length; color: "#e7edf1" }
+            ToolButton { text: "→"; enabled: page.shotIndex<page.shots.length-1; onClicked: page.shotIndex++ }
+            Item { Layout.fillWidth: true }
+            ToolButton { text: "×"; font.pixelSize: 26; Accessible.name: qsTranslate("Vetust", "Close"); onClicked: galleryDialog.close() }
+        }
+        contentItem: Image { source: page.shot; fillMode: Image.PreserveAspectFit; asynchronous: true; sourceSize.width: 1800 }
     }
 }

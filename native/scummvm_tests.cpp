@@ -59,6 +59,27 @@ private slots:
         QVERIFY(scumm.games().first().toMap()["manual"].toString().isEmpty());
 #endif
     }
+    void portableMetadata(){
+        QTemporaryDir tmp;const auto app=tmp.path()+"/app",base=tmp.path()+"/library",meta=base+"/metadata/Monkey2";
+        QDir().mkpath(base+"/Monkey2");writeFile(meta+"/art.png","image");writeFile(meta+"/guide.pdf","pdf");
+        QJsonObject record{{"title","Monkey Island 2"},{"year","1991"},{"developer","LucasArts"},{"descriptions",QJsonObject{{"en","English text"},{"es","Texto español"},{"pt","Português"},{"pt_BR","Brasil"}}},{"cover","art.png"},{"box3d","art.png"},{"shots",QJsonArray{"art.png","../outside.png","missing.png"}},{"manual","guide.pdf"}};
+        const auto encoded=QJsonDocument(QJsonObject{{"format",1},{"games",QJsonObject{{"monkey2",record}}}}).toJson();writeFile(meta+"/game.json",encoded);
+        writeFile(base+"/metadata/outside.png","outside");
+        const ScummConfig ini{{"target",{{"gameid","monkey2"},{"path",base+"/Monkey2"},{"description","Monkey 2"}}}};
+        writeFile(app+"/config/scummvm.ini",ScummLibrary::serialize(ini));
+        ScummLibrary scumm(app);scumm.setLibrary({},base,base+"/metadata");const auto originalLocale=QLocale();QLocale::setDefault(QLocale("es"));
+        auto data=scumm.gameMetadata("Monkey2","monkey2");QCOMPARE(data["description"].toString(),QString("Texto español"));QCOMPARE(data["shots"].toList().size(),1);
+        QVERIFY(scumm.gameMetadata("Monkey2","tentacle").isEmpty());QVERIFY(scumm.gameMetadata("../Monkey2","monkey2").isEmpty());
+        const auto row=scumm.games().first().toMap();QCOMPARE(row["year"].toString(),QString("1991"));QCOMPARE(row["manual"],data["manual"]);
+        QSignalSpy manual(&scumm,&ScummLibrary::manualReady);scumm.openManual("Monkey2");QCOMPARE(manual.size(),1);
+        QLocale::setDefault(QLocale("pt_BR"));QCOMPARE(scumm.gameMetadata("Monkey2","monkey2")["description"].toString(),QString("Brasil"));
+        QLocale::setDefault(QLocale("de"));QCOMPARE(scumm.gameMetadata("Monkey2","monkey2")["description"].toString(),QString("English text"));
+        // Una biblioteca trasladada sigue resolviendo sus recursos sin otra colección conectada.
+        QVERIFY(QDir().rename(base,tmp.path()+"/moved"));scumm.setLibrary({},tmp.path()+"/moved",tmp.path()+"/moved/metadata");
+        data=scumm.gameMetadata("Monkey2","monkey2");QCOMPARE(QUrl(data["box3d"].toString()).toLocalFile(),tmp.path()+"/moved/metadata/Monkey2/art.png");
+        writeFile(tmp.path()+"/moved/metadata/Monkey2/game.json","{broken");QVERIFY(scumm.gameMetadata("Monkey2","monkey2").isEmpty());
+        QLocale::setDefault(originalLocale);
+    }
     void hiddenFoldersPersist(){
         QTemporaryDir tmp;const QString root=tmp.path()+"/app",lib=tmp.path()+"/library";
         QDir().mkpath(lib+"/scummvm/Sin detectar español");

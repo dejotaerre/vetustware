@@ -120,6 +120,15 @@ Use **Hide game** in a folder's details to hide it from the default view and sea
 
 To use a different drive, choose the folder containing the games and their `metadata/` under **Settings → Libraries and storage**. This rescans without moving files. Folders that retain their names keep their settings, hidden flags and saves. The optional `scummvm` path in `config/storage.json` is retained if the drive is disconnected.
 
+
+### Portable game details
+
+`metadata/<game-folder>/game.json` can carry an independent game sheet: title, year, developer, publisher, genre, localized descriptions, box art, screenshots and a manual. The detail view uses the interface language, falling back to English. Existing local covers and manuals retain priority. Images copied from a DOS equivalent can be marked as reference images because the selected ScummVM edition may differ.
+
+The JSON uses `"format": 1` and a `"games"` object keyed by the exact ScummVM `gameid`. Each record accepts `title`, `year`, `developer`, `publisher`, `genre`, `descriptions` (language keys such as `en`, `es`, `pt_BR`), `cover`, `box3d`, `background`, `manual`, and a `shots` array. All media paths are relative to the directory containing `game.json`; files outside it are rejected. Setting `source.engine` to `dosbox` labels the gallery as reference images. Multiple IDs in one folder keep their metadata separate.
+
+Copy the referenced files with the JSON to make the ScummVM collection independent of the DOSBox library. This is a metadata format, not an automatic importer: copying a DOSBox catalog without converting its records and copying its assets is insufficient. Without a matching local record, the existing DOSBox artwork fallback remains available.
+
 ## Atari 2600 and Stella
 
 Choose the folder under **Libraries and storage** or **Atari settings**.

@@ -239,6 +239,15 @@ En la ficha de cada carpeta, «Ocultar juego» la retira de la vista habitual si
 
 En Ajustes → Bibliotecas y almacenamiento, ScummVM permite elegir otra ubicación, incluso en otro disco. Selecciona la carpeta que contiene las carpetas de cada juego y metadata. El cambio actualiza el catálogo sin trasladar archivos; conserva las opciones, los ocultos y las partidas de las carpetas que mantienen su nombre. La ruta opcional se guarda en config/storage.json, clave scummvm. Una ruta personalizada no se sustituye por otra al desconectar su disco.
 
+
+### Fichas independientes
+
+`metadata/<carpeta-del-juego>/game.json` permite conservar una ficha independiente: título, año, estudio, editor, género, descripciones por idioma, caja 3D, capturas y manual. La descripción sigue el idioma de la interfaz y vuelve al inglés si no hay traducción. Las portadas y manuales locales existentes tienen prioridad. Las capturas copiadas de DOS se identifican como imágenes de referencia, pues la edición elegida en ScummVM puede ser distinta.
+
+El JSON utiliza `"format": 1` y un objeto `"games"` cuyas claves son el `gameid` exacto de ScummVM. Cada registro admite `title`, `year`, `developer`, `publisher`, `genre`, `descriptions` (claves `en`, `es`, `pt_BR`), `cover`, `box3d`, `background`, `manual` y una lista `shots`. Las rutas de los recursos son relativas a la carpeta que contiene `game.json`; se rechazan archivos externos. `source.engine` con valor `dosbox` identifica la galería como material de referencia. Varios identificadores en una carpeta conservan sus fichas separadas.
+
+Al copiar el JSON junto con sus recursos, la colección ScummVM deja de necesitar DOSBox para mostrar esa ficha. Este formato no importa automáticamente un catálogo DOS: también hay que convertir los registros y copiar los archivos referenciados. Si no existe un registro local correspondiente, continúa disponible el respaldo visual del catálogo DOSBox.
+
 ## Atari 2600 y Stella
 
 La sección Atari usa la carpeta elegida en **Bibliotecas y almacenamiento**

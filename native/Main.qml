@@ -435,7 +435,7 @@ ApplicationWindow {
             ColumnLayout {
                 Layout.fillWidth: true; Layout.preferredWidth: 440; Layout.minimumWidth: 285; spacing: game.hasSpanish ? 7 : window.height < 800 ? 8 : 12
                 Row { spacing: 12; Rectangle { width: 5; height: 5; radius: 3; color: window.cyan; anchors.verticalCenter: parent.verticalCenter } LabelText { text: "MS-DOS     —     " + (game.year || ""); font.pixelSize: 10; font.letterSpacing: 2 } }
-                Text { Layout.fillWidth: true; text: game.title || "VETUSTware"; color: "#f1d3a0"; font.family: "Noto Serif"; font.pixelSize: window.height < 800 ? 26 : game.hasSpanish ? 32 : game.title.length>42 ? 33 : 39; font.weight: Font.Normal; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight; lineHeight: 1.02 }
+                Text { Layout.fillWidth: true; text: game.title || "VETUSTware"; color: "#f1d3a0"; font.family: "Noto Serif"; font.pixelSize: window.height < 800 ? 26 : game.hasSpanish ? 32 : (game.title || "").length>42 ? 33 : 39; font.weight: Font.Normal; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight; lineHeight: 1.02 }
                 LabelText { Layout.fillWidth: true; text: game.developer || game.publisher || ""; color: "#c2cbd2"; elide: Text.ElideRight; font.pixelSize: 12 }
                 Row { spacing: 7
                     Repeater { model: (game.genre || "MS-DOS").split(";").slice(0,3)
